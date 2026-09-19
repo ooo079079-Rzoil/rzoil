@@ -30,6 +30,7 @@ import {
   saveStoreSettingsToDatabase,
   fetchStoreSettingsFromDatabase,
   fetchProductsFromDatabase,
+  syncLocalDataToDatabase,
   saveDistributorToDatabase,
   deleteDistributorFromDatabase,
   fetchDistributorsFromDatabase,
@@ -237,49 +238,8 @@ export default function App() {
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Create map of official items from rzoil.net
-          const officialById = new Map<string, Product>();
-          const officialByName = new Map<string, Product>();
-          ALL_INITIAL_PRODUCTS.forEach(p => {
-            if (p.id) officialById.set(p.id, p);
-            // Also map numeric suffix (e.g. "7556" for "rz-7556")
-            const numPart = p.id.replace('rz-', '');
-            officialById.set(numPart, p);
-            if (p.name) officialByName.set(p.name.trim(), p);
-          });
-
-          // Upgrade existing products with official exact rzoil.net images, descriptions and categories
-          const updated: Product[] = parsed.map((p: Product) => {
-            const rawId = p.id ? String(p.id).trim() : '';
-            const match = officialById.get(rawId) || 
-                          officialById.get(`rz-${rawId}`) || 
-                          officialByName.get(p.name?.trim());
-            if (match) {
-              return {
-                ...match,
-                ...p,
-                id: match.id, // Normalize to standard unique id like rz-7556
-                image: match.image || p.image || RZ_OFFICIAL_FALLBACK_LOGO,
-                images: match.images || [match.image || p.image || RZ_OFFICIAL_FALLBACK_LOGO],
-                description: match.description || p.description,
-                subtitle: match.subtitle || p.subtitle,
-                features: match.features?.length ? match.features : p.features,
-                category: match.category || p.category,
-              };
-            }
-            return p;
-          });
-
-          // Deduplicate the updated list
-          const dedupedUpdated = sanitizeProductCatalog(updated);
-
-          // Merge any missing products from the full 81 official catalog
-          const existingIds = new Set(dedupedUpdated.map(p => p.id));
-          const missing = ALL_INITIAL_PRODUCTS.filter(p => !existingIds.has(p.id));
-          const finalProducts = sanitizeProductCatalog([...dedupedUpdated, ...missing]);
-          localStorage.setItem('rzoil_jordan_products', JSON.stringify(finalProducts));
-          return finalProducts;
+        if (Array.isArray(parsed)) {
+          return sanitizeProductCatalog(parsed);
         }
       } catch (e) { /* ignore */ }
     }
@@ -373,10 +333,17 @@ export default function App() {
       }
     }).catch(console.warn);
 
-    // Attempt to load products from MySQL if configured
+    // Attempt to load products from MySQL or Server Database
     fetchProductsFromDatabase(dbConfig).then((res) => {
-      if (res.success && Array.isArray(res.products) && res.products.length > 0) {
-        setProductsList(sanitizeProductCatalog(res.products));
+      if (res.success && Array.isArray(res.products)) {
+        if (res.initialized || res.products.length > 0) {
+          const sanitized = sanitizeProductCatalog(res.products);
+          setProductsList(sanitized);
+          localStorage.setItem('rzoil_jordan_products', JSON.stringify(sanitized));
+        } else {
+          // If server is clean/uninitialized, synchronize existing initial catalog to server
+          syncLocalDataToDatabase(dbConfig, productsList, distributors, orders, settings).catch(console.warn);
+        }
       }
     }).catch(console.warn);
 
@@ -691,25 +658,26 @@ export default function App() {
   };
 
   const handleDeleteProduct = (productId: string) => {
-    setProductsList(prev => prev.filter(p => p.id !== productId));
-    if (dbConfig.isConfigured) {
-      deleteProductFromDatabase(dbConfig, productId).then(res => {
-        if (res.success) {
-          showToast('تم حذف المنتج من قاعدة البيانات بنجاح ✅');
-        }
-      }).catch(console.warn);
-    } else {
-      showToast('تم حذف المنتج بنجاح');
-    }
+    setProductsList(prev => {
+      const next = prev.filter(p => p.id !== productId && p.code !== productId);
+      localStorage.setItem('rzoil_jordan_products', JSON.stringify(next));
+      return next;
+    });
+    deleteProductFromDatabase(dbConfig, productId).then(res => {
+      if (res.success) {
+        showToast('تم حذف المنتج من قاعدة البيانات نهائياً ✅');
+      }
+    }).catch(console.warn);
   };
 
   const handleClearAllProducts = () => {
     setProductsList([]);
     localStorage.setItem('rzoil_jordan_products', JSON.stringify([]));
-    if (dbConfig.isConfigured) {
-      clearRemoteProducts(dbConfig).catch(console.warn);
-    }
-    showToast('تم تصفير جميع المنتجات في المتجر بنجاح');
+    clearRemoteProducts(dbConfig).then(res => {
+      if (res.success) {
+        showToast('تم تصفير وحذف جميع المنتجات من قاعدة البيانات بنجاح ✅');
+      }
+    }).catch(console.warn);
   };
 
   const handleClearAllOrders = () => {

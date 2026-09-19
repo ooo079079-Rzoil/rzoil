@@ -614,7 +614,7 @@ export const toggleProductStockInDatabase = async (
  */
 export const fetchProductsFromDatabase = async (
   config: DatabaseConfig
-): Promise<{ products?: Product[]; success: boolean }> => {
+): Promise<{ products?: Product[]; success: boolean; initialized?: boolean }> => {
   const endpoint = config.apiEndpoint || './api.php';
   try {
     const res = await fetch(`${endpoint}?action=get_products`, {
@@ -624,7 +624,7 @@ export const fetchProductsFromDatabase = async (
     if (!res.ok) return { success: false };
     const data = await res.json();
     if (data.success && Array.isArray(data.products)) {
-      return { products: data.products, success: true };
+      return { products: data.products, success: true, initialized: !!data.initialized };
     }
     return { success: false };
   } catch (e) {
