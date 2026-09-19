@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { Product, Order, Distributor, StoreSettings, AdminCredentials, DatabaseConfig } from '../types';
 import { RzTemplateLibrary } from './RzTemplateLibrary';
+import { InAppModal, InAppDialogProps } from './InAppModal';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ interface AdminPanelProps {
   products: Product[];
   templates?: Product[];
   onAddTemplateToStore?: (template: Product, customPrice: number) => void;
+  onAddAllTemplatesToStore?: () => void;
   onClearAllProducts?: () => void;
   onClearAllOrders?: () => void;
   onUpdateProductPrice: (productId: string, newPrice: number) => void;
@@ -77,6 +79,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   products,
   templates = [],
   onAddTemplateToStore,
+  onAddAllTemplatesToStore,
   onClearAllProducts,
   onClearAllOrders,
   onUpdateProductPrice,
@@ -98,6 +101,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'templates' | 'distributors' | 'database' | 'settings' | 'security'>('overview');
   
+  // In-App Dialog / Modal State
+  const [dialog, setDialog] = useState<InAppDialogProps>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
+
+  const showInAppAlert = (title: string, message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+    setDialog({
+      isOpen: true,
+      title,
+      message,
+      type,
+      confirmText: 'حسناً',
+      onClose: () => setDialog(prev => ({ ...prev, isOpen: false }))
+    });
+  };
+
+  const showInAppConfirm = (title: string, message: string, onConfirm: () => void, isDelete: boolean = false) => {
+    setDialog({
+      isOpen: true,
+      title,
+      message,
+      type: isDelete ? 'delete' : 'confirm',
+      confirmText: isDelete ? 'نعم، حذف' : 'نعم، تأكيد',
+      cancelText: 'إلغاء',
+      onConfirm: () => {
+        setDialog(prev => ({ ...prev, isOpen: false }));
+        onConfirm();
+      },
+      onCancel: () => setDialog(prev => ({ ...prev, isOpen: false })),
+      onClose: () => setDialog(prev => ({ ...prev, isOpen: false }))
+    });
+  };
+
   // Product edit states
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [tempPrice, setTempPrice] = useState<number>(0);
@@ -185,7 +224,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Handle image file selection from computer
   const handleImageFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('يرجى اختيار ملف صورة صالح (PNG, JPG, JPEG, WEBP)');
+      showInAppAlert('صيغة غير مدعومة', 'يرجى اختيار ملف صورة صالح (PNG, JPG, JPEG, WEBP)', 'warning');
       return;
     }
 
@@ -218,12 +257,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProduct.name || !newProduct.price) {
-      alert('يرجى ملء اسم وسعر المنتج');
+      showInAppAlert('بيانات ناقصة', 'يرجى ملء اسم وسعر المنتج لإضافته للمتجر', 'warning');
       return;
     }
 
     if (!uploadedImageFile && !newProduct.image) {
-      alert('يرجى تحميل صورة للمنتج أو اختيار قالب جاهز');
+      showInAppAlert('الصورة مطلوبة', 'يرجى تحميل صورة للمنتج من جهازك أو اختيار قالب جاهز', 'warning');
       return;
     }
 
@@ -316,22 +355,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
     // Verify current password
     if (currentPasswordInput !== adminCredentials.password) {
-      setSecurityErrorMsg('كلمة المرور الحالية غير صحيحة!');
+      const msg = 'كلمة المرور الحالية غير صحيحة!';
+      setSecurityErrorMsg(msg);
+      showInAppAlert('خطأ في التحقق', msg, 'error');
       return;
     }
 
     if (!newUsernameInput.trim()) {
-      setSecurityErrorMsg('يرجى تحديد اسم مستخدم جديد');
+      const msg = 'يرجى تحديد اسم مستخدم جديد';
+      setSecurityErrorMsg(msg);
+      showInAppAlert('بيانات ناقصة', msg, 'warning');
       return;
     }
 
-    if (newPasswordInput && newPasswordInput.length < 4) {
-      setSecurityErrorMsg('كلمة المرور يجب أن لا تقل عن 4 خانات');
+    if (newPasswordInput && newPasswordInput.length < 3) {
+      const msg = 'كلمة المرور يجب أن لا تقل عن 3 خانات';
+      setSecurityErrorMsg(msg);
+      showInAppAlert('كلمة مرور قصيرة', msg, 'warning');
       return;
     }
 
     if (newPasswordInput !== confirmPasswordInput) {
-      setSecurityErrorMsg('كلمة المرور الجديدة غير متطابقة مع التأكيد!');
+      const msg = 'كلمة المرور الجديدة غير متطابقة مع التأكيد!';
+      setSecurityErrorMsg(msg);
+      showInAppAlert('عدم تطابق', msg, 'error');
       return;
     }
 
@@ -341,7 +388,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     };
 
     onUpdateAdminCredentials(updatedCreds);
-    setSecuritySuccessMsg('تم تحديث بيانات المشرف (اسم المستخدم وكلمة المرور) بنجاح!');
+    setSecuritySuccessMsg('تم تحديث بيانات المشرف (اسم المستخدم وكلمة المرور) وحفظها بنجاح!');
+    showInAppAlert('تم الحفظ بنجاح', 'تم تحديث اسم المستخدم وكلمة المرور بنجاح وحفظ التغييرات في قاعدة البيانات!', 'success');
     setCurrentPasswordInput('');
     setNewPasswordInput('');
     setConfirmPasswordInput('');
@@ -688,9 +736,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm('هل أنت متأكد من رغبتك في تصفير وحذف جميع الطلبات؟')) {
-                          onClearAllOrders();
-                        }
+                        showInAppConfirm(
+                          'تصفير وحذف الطلبات',
+                          'هل أنت متأكد من رغبتك في تصفير وحذف جميع الطلبات المسجلة في المتجر وقاعدة البيانات؟',
+                          () => onClearAllOrders(),
+                          true
+                        );
                       }}
                       className="px-3 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-950/60 dark:hover:bg-red-900 text-red-600 dark:text-red-300 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                       title="تصفير وحذف جميع الطلبات"
@@ -748,9 +799,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           {/* Delete order */}
                           <button
                             onClick={() => {
-                              if (confirm(`هل أنت متأكد من حذف الطلب ${order.orderNumber}؟`)) {
-                                onDeleteOrder(order.id);
-                              }
+                              showInAppConfirm(
+                                'حذف الطلب',
+                                `هل أنت متأكد من حذف الطلب رقم ${order.orderNumber} للعميل ${order.customerName}؟`,
+                                () => onDeleteOrder(order.id),
+                                true
+                              );
                             }}
                             className="p-1.5 rounded-lg bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 dark:bg-gray-800 dark:hover:bg-red-950/40 transition cursor-pointer"
                             title="حذف الطلب"
@@ -830,9 +884,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm('هل أنت متأكد من رغبتك في تصفير وحذف جميع المنتجات المعروضة في المتجر للبدء من الصفر؟ (يمكنك إضافة أي صنف تريده لاحقاً من قوالب رزويل بضغطة زر)')) {
-                          onClearAllProducts();
-                        }
+                        showInAppConfirm(
+                          'تصفير جميع منتجات المتجر',
+                          'هل أنت متأكد من رغبتك في تصفير وحذف جميع المنتجات المعروضة في المتجر للبدء من الصفر؟ (يمكنك إضافة أي صنف تريده لاحقاً من قوالب رزويل بضغطة زر واحدة)',
+                          () => onClearAllProducts(),
+                          true
+                        );
                       }}
                       className="px-3 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap border border-red-200 dark:border-red-900/50"
                       title="تصفير جميع منتجات المتجر"
@@ -1234,9 +1291,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           <td className="p-3 text-center">
                             <button
                               onClick={() => {
-                                if (confirm(`هل أنت متأكد من حذف المنتج ${p.name}؟`)) {
-                                  onDeleteProduct(p.id);
-                                }
+                                showInAppConfirm(
+                                  'حذف المنتج',
+                                  `هل أنت متأكد من حذف المنتج "${p.name}"؟`,
+                                  () => onDeleteProduct(p.id),
+                                  true
+                                );
                               }}
                               className="p-1.5 text-gray-400 hover:text-red-600 transition cursor-pointer"
                               title="حذف المنتج"
@@ -1260,6 +1320,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <RzTemplateLibrary
                 templates={templates}
                 currentStoreProducts={products}
+                onAddAllTemplatesToStore={onAddAllTemplatesToStore}
                 onAddTemplateToStore={(template, customPrice) => {
                   if (onAddTemplateToStore) {
                     onAddTemplateToStore(template, customPrice);
@@ -1478,9 +1539,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             </button>
                             <button
                               onClick={() => {
-                                if (confirm(`هل أنت متأكد من حذف موزع "${d.city}"؟`)) {
-                                  onDeleteDistributor(d.id);
-                                }
+                                showInAppConfirm(
+                                  'حذف الموزع',
+                                  `هل أنت متأكد من حذف موزع مدينة "${d.city}"؟`,
+                                  () => onDeleteDistributor(d.id),
+                                  true
+                                );
                               }}
                               className="p-1 text-gray-400 hover:text-red-600 transition cursor-pointer"
                               title="حذف"
@@ -1914,6 +1978,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
 
       </div>
+
+      {/* In-App Custom Interactive Modal / Dialog */}
+      <InAppModal {...dialog} />
     </div>
   );
 };

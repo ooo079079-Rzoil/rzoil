@@ -75,5 +75,22 @@ INSERT INTO `rzoil_settings` (`key_name`, `value_text`) VALUES
 ('shipping_cost', '3.00'),
 ('support_phone', '0791000001'),
 ('whatsapp_phone', '0791000001'),
-('working_hours', 'يومياً من 9:00 صباحاً حتى 9:00 مساءً ما عدا الجمعة')
+('working_hours', 'يومياً من 9:00 صباحاً حتى 9:00 مساءً ما عدا الجمعة'),
+('admin_username', 'admin'),
+('admin_password', '123')
 ON DUPLICATE KEY UPDATE `value_text` = VALUES(`value_text`);
+
+-- 6. جدول مدراء ومسؤولي النظام (Admins Table)
+CREATE TABLE IF NOT EXISTS `rzoil_admins` (
+  `id` varchar(64) NOT NULL,
+  `username` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `role` varchar(50) DEFAULT 'admin',
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `rzoil_admins` (`id`, `username`, `password`, `role`) VALUES
+('admin_main', 'admin', '123', 'admin')
+ON DUPLICATE KEY UPDATE `username` = VALUES(`username`);

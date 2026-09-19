@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Product } from '../types';
+import { ALL_INITIAL_PRODUCTS } from '../data/products';
 import { 
   Search, 
   Plus, 
@@ -14,24 +15,31 @@ import {
   Info,
   SlidersHorizontal,
   ExternalLink,
-  Trash2
+  Trash2,
+  Layers,
+  RotateCcw
 } from 'lucide-react';
 
 interface RzTemplateLibraryProps {
-  templates: Product[];
+  templates?: Product[];
   currentStoreProducts: Product[];
   onAddTemplateToStore: (template: Product, customPrice: number) => void;
   onRemoveFromStore: (productId: string) => void;
   onFillFormWithTemplate?: (template: Product) => void;
+  onAddAllTemplatesToStore?: () => void;
 }
 
 export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
-  templates,
-  currentStoreProducts,
+  templates = ALL_INITIAL_PRODUCTS,
+  currentStoreProducts = [],
   onAddTemplateToStore,
   onRemoveFromStore,
-  onFillFormWithTemplate
+  onFillFormWithTemplate,
+  onAddAllTemplatesToStore
 }) => {
+  // Safe fallback to full official catalog
+  const safeTemplates = (templates && templates.length > 0) ? templates : ALL_INITIAL_PRODUCTS;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [expandedDescId, setExpandedDescId] = useState<string | null>(null);
@@ -39,7 +47,7 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
   // Custom price map for each template { [templateId]: number }
   const [prices, setPrices] = useState<{ [key: string]: number }>(() => {
     const initial: { [key: string]: number } = {};
-    templates.forEach(t => {
+    safeTemplates.forEach(t => {
       initial[t.id] = t.price || 10;
     });
     return initial;
@@ -48,11 +56,11 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
   // Categories list
   const categories = useMemo(() => {
     const set = new Set<string>();
-    templates.forEach(t => {
+    safeTemplates.forEach(t => {
       if (t.category) set.add(t.category);
     });
     return Array.from(set);
-  }, [templates]);
+  }, [safeTemplates]);
 
   // Check if template is already active in store by code or name
   const isTemplateAdded = (template: Product): Product | undefined => {
@@ -63,7 +71,7 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
 
   // Filter templates
   const filteredTemplates = useMemo(() => {
-    return templates.filter(t => {
+    return safeTemplates.filter(t => {
       const matchCat = selectedCategory === 'all' || t.category === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q || 
@@ -73,13 +81,25 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
         (t.description && t.description.toLowerCase().includes(q));
       return matchCat && matchSearch;
     });
-  }, [templates, selectedCategory, searchQuery]);
+  }, [safeTemplates, selectedCategory, searchQuery]);
 
   const handlePriceChange = (templateId: string, val: number) => {
     setPrices(prev => ({
       ...prev,
       [templateId]: isNaN(val) ? 0 : val
     }));
+  };
+
+  const handleAddAll = () => {
+    if (onAddAllTemplatesToStore) {
+      onAddAllTemplatesToStore();
+    } else {
+      safeTemplates.forEach(t => {
+        if (!isTemplateAdded(t)) {
+          onAddTemplateToStore(t, prices[t.id] || t.price || 10);
+        }
+      });
+    }
   };
 
   return (
@@ -92,19 +112,28 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
           </div>
           <div>
             <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
-              <span>مكتبة قوالب منتجات رزويل RZ Oil الألمانية الجاهزة</span>
+              <span>مكتبة كتالوج قوالب منتجات رزويل RZ Oil الألمانية</span>
               <span className="px-2 py-0.5 bg-[#ea1b25] text-white text-[10px] font-black rounded-full">
-                {templates.length} منتج جاهز
+                {safeTemplates.length} صنف معتمد
               </span>
             </h3>
             <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
-              جميع الصور والشروحات والمواصفات الألمانية الرسمية جاهزة ومحفوظة هنا. 
-              حدد السعر بالدينار (د.أ) لأي صنف تريده واضغط <strong className="text-[#ea1b25]">"إضافة للمتجر"</strong> ليظهر لزبائنك فوراً!
+              جميع المنتجات الألمانية بالصور والأكواد والأسعار الرسمية متوفرة. يمكنك إضافة أي منتج للمتجر فردياً أو إضافة الكتالوج كاملاً بضغطة زر!
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 self-start md:self-center">
+          <button
+            onClick={handleAddAll}
+            type="button"
+            className="px-3.5 py-2 bg-[#ea1b25] hover:bg-[#c9141d] active:scale-[0.98] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap"
+            title="إضافة كافة منتجات الكتالوج للمتجر"
+          >
+            <Layers className="w-4 h-4" />
+            <span>إضافة كامل الكتالوج ({safeTemplates.length} صنف)</span>
+          </button>
+
           <div className="px-3 py-1.5 bg-white dark:bg-[#1a1a1a] rounded-xl border border-gray-200 dark:border-gray-800 text-xs text-gray-700 dark:text-gray-300">
             معروض بالمتجر: <strong className="text-green-600 dark:text-green-400 font-mono text-sm">{currentStoreProducts.length}</strong> صنف
           </div>

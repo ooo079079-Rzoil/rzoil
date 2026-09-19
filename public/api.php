@@ -196,6 +196,14 @@ if ($action === 'save_config') {
         "CREATE TABLE IF NOT EXISTS `rzoil_settings` (
             `key_name` VARCHAR(64) PRIMARY KEY,
             `value_text` TEXT NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;",
+
+        "CREATE TABLE IF NOT EXISTS `rzoil_admins` (
+            `id` VARCHAR(64) PRIMARY KEY,
+            `username` VARCHAR(100) NOT NULL UNIQUE,
+            `password` VARCHAR(255) NOT NULL,
+            `role` VARCHAR(50) DEFAULT 'admin',
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
     ];
 
@@ -345,6 +353,14 @@ $conn->query("CREATE TABLE IF NOT EXISTS `rzoil_distributors` (
 $conn->query("CREATE TABLE IF NOT EXISTS `rzoil_settings` (
     `key_name` VARCHAR(64) PRIMARY KEY,
     `value_text` TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+$conn->query("CREATE TABLE IF NOT EXISTS `rzoil_admins` (
+    `id` VARCHAR(64) PRIMARY KEY,
+    `username` VARCHAR(100) NOT NULL UNIQUE,
+    `password` VARCHAR(255) NOT NULL,
+    `role` VARCHAR(50) DEFAULT 'admin',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
 // -------------------------------------------------------------
@@ -567,6 +583,169 @@ if ($action === 'clear_all_products') {
 if ($action === 'clear_all_orders') {
     $conn->query("TRUNCATE TABLE `rzoil_orders`");
     sendJson(true, ['message' => 'تم تصفير جميع الطلبات من قاعدة بيانات MySQL بنجاح']);
+}
+
+// -------------------------------------------------------------
+// ACTION: UPDATE ADMIN CREDENTIALS (حفظ وتحديث بيانات الدخول في MySQL)
+// -------------------------------------------------------------
+if ($action === 'update_admin_credentials') {
+    $username = trim($input['username'] ?? '');
+    $password = trim($input['password'] ?? '');
+
+    if (empty($username) || empty($password)) {
+        sendJson(false, ['message' => 'اسم المستخدم وكلمة المرور مطلوبان']);
+    }
+
+    // Save in rzoil_admins table
+    $stmt = $conn->prepare("INSERT INTO `rzoil_admins` (`id`, `username`, `password`, `role`)
+        VALUES ('admin_main', ?, ?, 'admin')
+        ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `password` = VALUES(`password`)");
+    $stmt->bind_param("ss", $username, $password);
+    $stmt->execute();
+
+    // Also update in rzoil_settings table for backup
+    $stmt2 = $conn->prepare("INSERT INTO `rzoil_settings` (`key_name`, `value_text`) VALUES ('admin_username', ?) ON DUPLICATE KEY UPDATE `value_text` = VALUES(`value_text`)");
+    $stmt2->bind_param("s", $username);
+    $stmt2->execute();
+
+    $stmt3 = $conn->prepare("INSERT INTO `rzoil_settings` (`key_name`, `value_text`) VALUES ('admin_password', ?) ON DUPLICATE KEY UPDATE `value_text` = VALUES(`value_text`)");
+    $stmt3->bind_param("s", $password);
+    $stmt3->execute();
+
+    sendJson(true, [
+        'message' => 'تم تحديث اسم المستخدم وكلمة المرور وحفظها في قاعدة بيانات MySQL بنجاح!',
+        'username' => $username
+    ]);
+}
+
+// -------------------------------------------------------------
+// ACTION: GET ADMIN CREDENTIALS (استرجاع بيانات المشرف من MySQL)
+// -------------------------------------------------------------
+if ($action === 'get_admin_credentials') {
+    $res = $conn->query("SELECT `username`, `password` FROM `rzoil_admins` WHERE `id` = 'admin_main' LIMIT 1");
+    if ($res && $row = $res->fetch_assoc()) {
+        sendJson(true, [
+            'username' => $row['username'],
+            'password' => $row['password']
+        ]);
+    }
+
+    // Fallback check settings
+    $res2 = $conn->query("SELECT `key_name`, `value_text` FROM `rzoil_settings` WHERE `key_name` IN ('admin_username', 'admin_password')");
+    $creds = [];
+    if ($res2) {
+        while ($r = $res2->fetch_assoc()) {
+            $creds[$r['key_name']] = $r['value_text'];
+        }
+    }
+
+    if (!empty($creds['admin_username']) && !empty($creds['admin_password'])) {
+        sendJson(true, [
+            'username' => $creds['admin_username'],
+            'password' => $creds['admin_password']
+        ]);
+    }
+
+    sendJson(true, [
+        'username' => 'admin',
+        'password' => '123'
+    ]);
+}
+
+// -------------------------------------------------------------
+// ACTION: SAVE SINGLE PRODUCT
+// -------------------------------------------------------------
+if ($action === 'save_product') {
+    $p = $input['product'] ?? $input;
+    if (empty($p['id']) || empty($p['name'])) {
+        sendJson(false, ['message' => 'بيانات المنتج غير مكتملة']);
+    }
+
+    $stmt = $conn->prepare("INSERT INTO `rzoil_products` 
+        (`id`, `code`, `name`, `price`, `brand`, `category`, `image`, `description`, `volume`, `in_stock`, `features`, `usage_guide`)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE 
+        `code`=VALUES(`code`), `name`=VALUES(`name`), `price`=VALUES(`price`), `brand`=VALUES(`brand`), `category`=VALUES(`category`), `image`=VALUES(`image`), `description`=VALUES(`description`), `volume`=VALUES(`volume`), `in_stock`=VALUES(`in_stock`), `features`=VALUES(`features`), `usage_guide`=VALUES(`usage_guide`)");
+    
+    $inStock = !empty($p['inStock']) ? 1 : 0;
+    $featJson = json_encode($p['features'] ?? [], JSON_UNESCAPED_UNICODE);
+    $usage = $p['usage'] ?? '';
+    $desc = $p['description'] ?? '';
+    $brand = $p['brand'] ?? 'رزويل';
+    $vol = $p['volume'] ?? '300 مل';
+    $price = floatval($p['price'] ?? 10);
+    $code = $p['code'] ?? 'RZ-' . rand(1000, 9999);
+    $img = $p['image'] ?? '';
+
+    $stmt->bind_param("sssdsssssiss", 
+        $p['id'], $code, $p['name'], $price, $brand, $p['category'], $img, $desc, $vol, $inStock, $featJson, $usage
+    );
+    $stmt->execute();
+    sendJson(true, ['message' => 'تم حفظ المنتج في قاعدة البيانات بنجاح']);
+}
+
+// -------------------------------------------------------------
+// ACTION: DELETE SINGLE PRODUCT
+// -------------------------------------------------------------
+if ($action === 'delete_product') {
+    $id = $input['productId'] ?? '';
+    $stmt = $conn->prepare("DELETE FROM `rzoil_products` WHERE `id` = ?");
+    $stmt->bind_param("ss", $id);
+    $stmt->execute();
+    sendJson(true, ['message' => 'تم حذف المنتج من قاعدة البيانات']);
+}
+
+// -------------------------------------------------------------
+// ACTION: UPDATE PRODUCT PRICE
+// -------------------------------------------------------------
+if ($action === 'update_product_price') {
+    $id = $input['productId'] ?? '';
+    $price = floatval($input['price'] ?? 0);
+    $stmt = $conn->prepare("UPDATE `rzoil_products` SET `price` = ? WHERE `id` = ?");
+    $stmt->bind_param("ds", $price, $id);
+    $stmt->execute();
+    sendJson(true, ['message' => 'تم تحديث السعر في قاعدة البيانات']);
+}
+
+// -------------------------------------------------------------
+// ACTION: TOGGLE PRODUCT STOCK
+// -------------------------------------------------------------
+if ($action === 'toggle_product_stock') {
+    $id = $input['productId'] ?? '';
+    $inStock = !empty($input['inStock']) ? 1 : 0;
+    $stmt = $conn->prepare("UPDATE `rzoil_products` SET `in_stock` = ? WHERE `id` = ?");
+    $stmt->bind_param("is", $inStock, $id);
+    $stmt->execute();
+    sendJson(true, ['message' => 'تم تحديث حالة التوفر في قاعدة البيانات']);
+}
+
+// -------------------------------------------------------------
+// ACTION: SAVE STORE SETTINGS
+// -------------------------------------------------------------
+if ($action === 'save_settings') {
+    $settings = $input['settings'] ?? [];
+    foreach ($settings as $key => $val) {
+        $keyStr = (string)$key;
+        $valStr = is_array($val) ? json_encode($val, JSON_UNESCAPED_UNICODE) : (string)$val;
+        $stmt = $conn->prepare("INSERT INTO `rzoil_settings` (`key_name`, `value_text`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value_text` = VALUES(`value_text`)");
+        $stmt->bind_param("ss", $keyStr, $valStr);
+        $stmt->execute();
+    }
+    sendJson(true, ['message' => 'تم حفظ الإعدادات في قاعدة البيانات']);
+}
+
+// -------------------------------------------------------------
+// ACTION: GET STORE SETTINGS
+// -------------------------------------------------------------
+if ($action === 'get_settings') {
+    $res = $conn->query("SELECT * FROM `rzoil_settings`");
+    $settings = [];
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $settings[$row['key_name']] = $row['value_text'];
+        }
+    }
+    sendJson(true, ['settings' => $settings]);
 }
 
 // Fallback for unknown action

@@ -274,3 +274,97 @@ export const clearRemoteOrders = async (
     };
   }
 };
+
+/**
+ * Save Admin Username & Password directly to MySQL database
+ */
+export const saveAdminCredentialsToDatabase = async (
+  config: DatabaseConfig,
+  username: string,
+  password: string
+): Promise<{ success: boolean; message: string }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=update_admin_credentials`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    return {
+      success: !!data.success,
+      message: data.message || (data.success ? 'تم تحديث كلمة المرور في قاعدة البيانات بنجاح' : 'فشل التحديث')
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      message: 'تعذر الاتصال بقاعدة البيانات لتحديث كلمة المرور: ' + e.message
+    };
+  }
+};
+
+/**
+ * Fetch Admin Credentials from MySQL database
+ */
+export const fetchAdminCredentialsFromDatabase = async (
+  config: DatabaseConfig
+): Promise<{ username?: string; password?: string; success: boolean }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=get_admin_credentials`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) return { success: false };
+    const data = await res.json();
+    if (data.success && data.username && data.password) {
+      return { username: data.username, password: data.password, success: true };
+    }
+    return { success: false };
+  } catch (e) {
+    return { success: false };
+  }
+};
+
+/**
+ * Save a single product to MySQL database
+ */
+export const saveProductToDatabase = async (
+  config: DatabaseConfig,
+  product: Product
+): Promise<{ success: boolean; message: string }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=save_product`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product })
+    });
+    const data = await res.json();
+    return { success: !!data.success, message: data.message || 'تم الحفظ' };
+  } catch (e: any) {
+    return { success: false, message: e.message };
+  }
+};
+
+/**
+ * Delete a product from MySQL database
+ */
+export const deleteProductFromDatabase = async (
+  config: DatabaseConfig,
+  productId: string
+): Promise<{ success: boolean; message: string }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=delete_product`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId })
+    });
+    const data = await res.json();
+    return { success: !!data.success, message: data.message || 'تم الحذف' };
+  } catch (e: any) {
+    return { success: false, message: e.message };
+  }
+};
+
