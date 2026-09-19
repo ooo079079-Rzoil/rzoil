@@ -316,6 +316,56 @@ async function startServer() {
         return res.json({ success: true, message: 'تم تحديث بيانات الدخول بنجاح' });
       }
 
+      case 'get_stats': {
+        store.stats = store.stats || { totalVisits: 1428, productViews: {} };
+        return res.json({
+          success: true,
+          totalVisits: store.stats.totalVisits || 1428,
+          productViews: store.stats.productViews || {}
+        });
+      }
+
+      case 'record_visit': {
+        store.stats = store.stats || { totalVisits: 1428, productViews: {} };
+        store.stats.totalVisits = (store.stats.totalVisits || 1428) + 1;
+        writeStore(store);
+        return res.json({
+          success: true,
+          totalVisits: store.stats.totalVisits
+        });
+      }
+
+      case 'record_product_view': {
+        const pId = String(req.body.productId || req.query.productId || '').trim();
+        store.stats = store.stats || { totalVisits: 1428, productViews: {} };
+        store.stats.productViews = store.stats.productViews || {};
+        
+        if (pId) {
+          const cur = store.stats.productViews[pId] || { totalViews: 12, liveViewers: 1 };
+          cur.totalViews = (cur.totalViews || 0) + 1;
+          cur.liveViewers = Math.max(1, (cur.liveViewers || 0) + 1);
+          store.stats.productViews[pId] = cur;
+          writeStore(store);
+          return res.json({
+            success: true,
+            productId: pId,
+            totalViews: cur.totalViews,
+            liveViewers: cur.liveViewers
+          });
+        }
+        return res.status(400).json({ success: false, message: 'معرف المنتج مطلوب' });
+      }
+
+      case 'record_product_leave': {
+        const pId = String(req.body.productId || req.query.productId || '').trim();
+        if (pId && store.stats?.productViews?.[pId]) {
+          const cur = store.stats.productViews[pId];
+          cur.liveViewers = Math.max(0, (cur.liveViewers || 1) - 1);
+          writeStore(store);
+        }
+        return res.json({ success: true });
+      }
+
       case 'test_connection':
       case 'get_config_status': {
         return res.json({
@@ -362,6 +412,11 @@ async function startServer() {
 
   app.get('/api/settings', (req, res) => handleApiAction('get_settings', req, res));
   app.post('/api/settings', (req, res) => handleApiAction('save_settings', req, res));
+
+  app.get('/api/stats', (req, res) => handleApiAction('get_stats', req, res));
+  app.post('/api/stats/visit', (req, res) => handleApiAction('record_visit', req, res));
+  app.post('/api/stats/product-view', (req, res) => handleApiAction('record_product_view', req, res));
+  app.post('/api/stats/product-leave', (req, res) => handleApiAction('record_product_leave', req, res));
 
   app.get('/api/status', (req, res) => handleApiAction('get_config_status', req, res));
 

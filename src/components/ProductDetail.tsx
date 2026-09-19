@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
 import { RZ_OFFICIAL_FALLBACK_LOGO } from '../data/products';
+import { recordProductViewInDatabase, recordProductLeaveInDatabase } from '../services/databaseService';
 import { 
   Heart, 
   ShoppingCart, 
@@ -12,7 +13,9 @@ import {
   ZoomIn, 
   Share2, 
   Flame,
-  Check
+  Check,
+  Eye,
+  Users
 } from 'lucide-react';
 
 interface ProductDetailProps {
@@ -44,6 +47,27 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 }) => {
   const [isZoomed, setIsZoomed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [viewStats, setViewStats] = useState<{ totalViews: number; liveViewers: number }>({
+    totalViews: 24,
+    liveViewers: 3
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    recordProductViewInDatabase(product.id).then(res => {
+      if (isMounted && res) {
+        setViewStats({
+          totalViews: res.totalViews || 24,
+          liveViewers: res.liveViewers || 3
+        });
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      recordProductLeaveInDatabase(product.id);
+    };
+  }, [product.id]);
 
   const handleShareClick = () => {
     if (navigator.share) {
@@ -100,7 +124,16 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
         >
           {product.name}
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Live Viewers Real-time Badge */}
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 dark:bg-red-950/50 text-[#ea1b25] border border-red-200 dark:border-red-900/60 text-xs font-bold shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-[#ea1b25] animate-ping" />
+            <Eye className="w-3.5 h-3.5" />
+            <span>يشاهده الآن {viewStats.liveViewers} شخص</span>
+            <span className="text-gray-400 font-normal">|</span>
+            <span className="text-gray-600 dark:text-gray-300 font-normal">{viewStats.totalViews} مشاهدة</span>
+          </span>
+
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 text-xs font-bold">
             <CheckCircle2 className="w-3.5 h-3.5" />
             متوفر في المخزن

@@ -183,19 +183,37 @@ export const Footer: React.FC<FooterProps> = ({
         </div>
 
         {/* Quick Footer Links */}
-        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-4 border-t border-gray-800 text-xs text-gray-400">
-          <button onClick={onGoHome} className="hover:text-white transition cursor-pointer">الصفحة الرئيسية</button>
-          <span>•</span>
-          <button onClick={onOpenDistributors} className="hover:text-white transition cursor-pointer">الموزعين في الأردن</button>
-          <span>•</span>
-          <button onClick={onOpenContact} className="hover:text-white transition cursor-pointer">اتصل بنا</button>
-          <span>•</span>
-          <button onClick={onOpenAdmin} className="hover:text-white transition cursor-pointer font-bold text-gray-300">لوحة الإدارة والمزامنة</button>
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-gray-800 text-xs text-gray-400">
+          <div className="flex flex-wrap items-center gap-4">
+            <button onClick={onGoHome} className="hover:text-white transition cursor-pointer">الصفحة الرئيسية</button>
+            <span>•</span>
+            <button onClick={onOpenDistributors} className="hover:text-white transition cursor-pointer">الموزعين في الأردن</button>
+            <span>•</span>
+            <button onClick={onOpenContact} className="hover:text-white transition cursor-pointer">اتصل بنا</button>
+            <span>•</span>
+            <button onClick={onOpenAdmin} className="hover:text-white transition cursor-pointer font-bold text-gray-300">لوحة الإدارة والمزامنة</button>
+          </div>
+
+          {/* Visitor counter badge */}
+          <div className="flex items-center gap-2 px-3 py-1 bg-gray-900 border border-gray-800 rounded-lg text-[11px]">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-gray-400">إجمالي زوار الموقع:</span>
+            <strong className="text-white font-mono">{typeof window !== 'undefined' ? (parseInt(localStorage.getItem('rzoil_site_visits') || '1428', 10)).toLocaleString('ar-JO') : '1,428'} زائر</strong>
+          </div>
         </div>
 
         {/* Copyright notice */}
-        <div className="pt-4 border-t border-gray-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-500 font-mono gap-2">
-          <span>Developed by CitySoft © 2011 - {new Date().getFullYear()}</span>
+        <div className="pt-4 border-t border-gray-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-400 font-mono gap-2">
+          <a 
+            href="https://wa.me/962798010075" 
+            target="_blank" 
+            rel="noreferrer"
+            className="text-white hover:text-[#25D366] transition cursor-pointer font-bold flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-gray-900/80 border border-gray-800 hover:border-green-600/50"
+            title="تواصل مباشر عبر واتساب مع المطور عبدالله رباع"
+          >
+            <span className="text-[#25D366] text-xs">💬</span>
+            <span>Developed by Abdullah Rabba © 2026</span>
+          </a>
           <span>RZ Oil Deutschland GmbH - Jordan Official Store - All Rights Reserved</span>
         </div>
       </div>

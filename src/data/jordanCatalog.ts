@@ -1483,3 +1483,33 @@ export const JORDAN_OFFICIAL_CATALOG: Product[] = [
     inStock: true
   }
 ];
+
+// Helper map for strict top-to-bottom ordering identical to https://rzoiljo.netlify.app/
+const JORDAN_ORDER_MAP = new Map<string, number>();
+JORDAN_OFFICIAL_CATALOG.forEach((item, index) => {
+  if (item.code) JORDAN_ORDER_MAP.set(item.code.toUpperCase().trim(), index);
+  if (item.id) JORDAN_ORDER_MAP.set(item.id.toLowerCase().trim(), index);
+});
+
+/**
+ * Sorts any list of products to match the exact top-to-bottom sequence of https://rzoiljo.netlify.app/
+ */
+export function sortByJordanCatalogOrder<T extends { code?: string; id?: string }>(list: T[]): T[] {
+  return [...list].sort((a, b) => {
+    const codeA = (a.code || '').toUpperCase().trim();
+    const codeB = (b.code || '').toUpperCase().trim();
+    const idA = (a.id || '').toLowerCase().trim();
+    const idB = (b.id || '').toLowerCase().trim();
+
+    const rankA = JORDAN_ORDER_MAP.has(codeA) 
+      ? JORDAN_ORDER_MAP.get(codeA)! 
+      : (JORDAN_ORDER_MAP.has(idA) ? JORDAN_ORDER_MAP.get(idA)! : 9999);
+      
+    const rankB = JORDAN_ORDER_MAP.has(codeB) 
+      ? JORDAN_ORDER_MAP.get(codeB)! 
+      : (JORDAN_ORDER_MAP.has(idB) ? JORDAN_ORDER_MAP.get(idB)! : 9999);
+
+    return rankA - rankB;
+  });
+}
+

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product, CartItem, Order, Distributor, StoreSettings, AdminCredentials, DatabaseConfig } from './types';
 import { ALL_INITIAL_PRODUCTS, MAIN_PRODUCT, RELATED_PRODUCTS, CATEGORIES, RZ_OFFICIAL_FALLBACK_LOGO } from './data/products';
-import { JORDAN_OFFICIAL_CATALOG } from './data/jordanCatalog';
+import { JORDAN_OFFICIAL_CATALOG, sortByJordanCatalogOrder } from './data/jordanCatalog';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { HomeView } from './components/HomeView';
@@ -39,7 +39,8 @@ import {
   updateOrderStatusInDatabase,
   deleteOrderFromDatabase,
   updateProductPriceInDatabase,
-  toggleProductStockInDatabase
+  toggleProductStockInDatabase,
+  recordSiteVisit
 } from './services/databaseService';
 import { Check, ShieldCheck, LogOut } from 'lucide-react';
 
@@ -215,7 +216,7 @@ function sanitizeProductCatalog(products: Product[]): Product[] {
     });
   }
 
-  return result;
+  return sortByJordanCatalogOrder(result);
 }
 
 export default function App() {
@@ -322,6 +323,9 @@ export default function App() {
 
   // Check live status on server mount & sync admin credentials, store settings, and products from MySQL
   useEffect(() => {
+    // Record real visitor
+    recordSiteVisit().catch(console.warn);
+
     checkServerDbStatus(dbConfig.apiEndpoint).then((status) => {
       if (status.isConnected) {
         setIsDbConnected(true);
