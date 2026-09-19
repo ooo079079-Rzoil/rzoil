@@ -297,10 +297,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 >
                   {/* Badges & Wishlist */}
                   <div className="absolute top-2.5 right-2.5 z-10 flex flex-col gap-1 items-start">
-                    <span className="bg-[#ea1b25] text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs">
-                      {product.originBadge || 'ألماني أصلي 🇩🇪'}
-                    </span>
-                    {product.originalPrice && product.originalPrice > product.price && (
+                    {product.inStock === false ? (
+                      <span className="bg-gray-900 border border-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-md uppercase tracking-wide">
+                        SOLD OUT ❌
+                      </span>
+                    ) : (
+                      <span className="bg-[#ea1b25] text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs">
+                        {product.originBadge || 'ألماني أصلي DE'}
+                      </span>
+                    )}
+                    {product.originalPrice && product.originalPrice > product.price && product.inStock !== false && (
                       <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">
                         خصم {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
                       </span>
@@ -331,11 +337,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       src={product.image}
                       alt={product.name}
                       referrerPolicy="no-referrer"
-                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-md"
+                      className={`max-h-full max-w-full object-contain transition-transform duration-300 drop-shadow-md ${
+                        product.inStock === false ? 'opacity-40 grayscale' : 'group-hover:scale-105'
+                      }`}
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = RZ_OFFICIAL_FALLBACK_LOGO;
                       }}
                     />
+
+                    {/* SOLD OUT Banner Overlay */}
+                    {product.inStock === false && (
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex flex-col items-center justify-center p-2 z-20">
+                        <span className="bg-[#ea1b25] text-white text-xs sm:text-sm font-black px-3 py-1 rounded-lg shadow-xl uppercase tracking-wider border border-white">
+                          SOLD OUT | نفد المخزون
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Body Info */}
@@ -391,17 +408,26 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           onClick={() => onSelectProduct(product)}
                           className="w-full py-2 px-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-[#2c2c2c] dark:hover:bg-[#333333] text-gray-800 dark:text-gray-200 text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
                         >
-                          <span>عرض التفاصيل</span>
+                          <span>التفاصيل</span>
                           <ArrowLeft className="w-3.5 h-3.5" />
                         </button>
 
-                        <button
-                          onClick={() => onAddToCart(product)}
-                          className="w-full py-2 px-2 rounded-xl bg-[#ea1b25] hover:bg-[#c9141d] text-white text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer shadow-xs"
-                        >
-                          <ShoppingCart className="w-3.5 h-3.5" />
-                          <span>{qty > 0 ? `في السلة (${qty})` : 'أضف للسلة'}</span>
-                        </button>
+                        {product.inStock === false ? (
+                          <button
+                            disabled
+                            className="w-full py-2 px-1 rounded-xl bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[11px] font-black cursor-not-allowed flex items-center justify-center gap-1 border border-gray-300/60 dark:border-gray-700/60"
+                          >
+                            <span>SOLD OUT</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onAddToCart(product)}
+                            className="w-full py-2 px-2 rounded-xl bg-[#ea1b25] hover:bg-[#c9141d] text-white text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                          >
+                            <ShoppingCart className="w-3.5 h-3.5" />
+                            <span>{qty > 0 ? `في السلة (${qty})` : 'أضف للسلة'}</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

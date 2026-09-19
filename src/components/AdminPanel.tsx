@@ -1262,6 +1262,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
 
                   <div>
+                    <label className="block font-bold mb-1">العنوان الفرعي والمواصفات البارزة (Subtitle)</label>
+                    <input
+                      type="text"
+                      placeholder="مثال: أحدث مواصفات فولكس فاجن وأودي G13 Si-OAT | 5L | السعر بالأردن 17 د.أ"
+                      value={newProduct.subtitle || ''}
+                      onChange={(e) => setNewProduct({ ...newProduct, subtitle: e.target.value })}
+                      className="w-full h-9 px-3 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-semibold text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
                     <label className="block font-bold mb-1">وصف المنتج</label>
                     <textarea
                       rows={2}
@@ -1670,6 +1681,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             />
                           </div>
                         </div>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold mb-1 text-gray-900 dark:text-gray-100">العنوان الفرعي والمواصفات البارزة (Subtitle)</label>
+                        <input
+                          type="text"
+                          value={editingProduct.subtitle || ''}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, subtitle: e.target.value })}
+                          className="w-full h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-bold text-gray-900 dark:text-white"
+                          placeholder="مثال: أحدث مواصفات فولكس فاجن وأودي G13 Si-OAT | 5L | السعر بالأردن 17 د.أ"
+                        />
                       </div>
 
                       <div>

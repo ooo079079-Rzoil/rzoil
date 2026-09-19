@@ -6,6 +6,7 @@ import {
   Heart, 
   ShoppingCart, 
   CheckCircle2, 
+  XCircle,
   ShieldCheck, 
   Truck, 
   RotateCcw, 
@@ -125,10 +126,17 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           {product.name}
         </h1>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 text-xs font-bold">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            متوفر في المخزن
-          </span>
+          {product.inStock === false ? (
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded bg-red-600 text-white text-xs font-black shadow-xs">
+              <XCircle className="w-4 h-4 text-white" />
+              <span>نفذت الكمية (SOLD OUT)</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 text-xs font-bold">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>متوفر في المخزن</span>
+            </span>
+          )}
           <button
             onClick={handleShareClick}
             className="flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:text-[#ea1b25] hover:border-[#ea1b25] transition cursor-pointer"
@@ -172,13 +180,23 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
               alt={product.name}
               referrerPolicy="no-referrer"
               className={`max-w-full max-h-full object-contain transition-transform duration-300 ${
-                isZoomed ? 'scale-125' : 'group-hover:scale-105'
-              }`}
+                product.inStock === false ? 'opacity-40 grayscale' : ''
+              } ${isZoomed ? 'scale-125' : 'group-hover:scale-105'}`}
               loading="eager"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = RZ_OFFICIAL_FALLBACK_LOGO;
               }}
             />
+
+            {/* SOLD OUT Banner Overlay */}
+            {product.inStock === false && (
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex flex-col items-center justify-center p-2 z-20">
+                <span className="bg-[#ea1b25] text-white text-sm sm:text-base font-black px-4 py-1.5 rounded-lg shadow-xl uppercase tracking-wider border-2 border-white">
+                  SOLD OUT | نفد المخزون
+                </span>
+                <span className="text-white text-xs font-bold mt-1 shadow-sm">غير متوفر حالياً بالمخزن</span>
+              </div>
+            )}
 
             {/* Zoom Trigger Button */}
             <button
@@ -279,49 +297,66 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
             {/* Quantity Selector & Add to Cart */}
             <div className="space-y-3">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block">الكمية:</span>
-              
-              {quantityInCart === 0 ? (
-                <button
-                  onClick={onAddToCart}
-                  className="w-full h-12 bg-[#ea1b25] hover:bg-[#c9141d] active:scale-[0.99] text-white font-bold text-base rounded-xl transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg cursor-pointer"
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                  <span>أضف إلى السلة</span>
-                </button>
-              ) : (
-                <div className="flex items-center justify-between bg-gray-100 dark:bg-[#2a2a2a] p-1.5 rounded-xl border border-gray-300 dark:border-gray-700">
+              {product.inStock === false ? (
+                <div className="space-y-2">
                   <button
-                    onClick={onIncrementQuantity}
-                    className="w-10 h-10 rounded-lg bg-[#ea1b25] text-white font-black text-xl flex items-center justify-center hover:bg-[#c9141d] transition cursor-pointer"
-                    title="زيادة الكمية"
+                    disabled
+                    className="w-full h-12 bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-black text-sm rounded-xl cursor-not-allowed flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-700"
                   >
-                    +
+                    <XCircle className="w-5 h-5 text-red-500" />
+                    <span>غير متوفر بالمخزن (SOLD OUT)</span>
                   </button>
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-black text-gray-900 dark:text-white font-mono">
-                      {quantityInCart}
-                    </span>
-                    <span className="text-[10px] text-gray-500 font-bold">في السلة</span>
-                  </div>
-                  <button
-                    onClick={onDecrementQuantity}
-                    className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-black text-xl flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 transition cursor-pointer"
-                    title="إنقاص الكمية"
-                  >
-                    -
-                  </button>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 text-center font-semibold">
+                    هذا المنتج نفذت كميته حالياً، يمكنك التواصل معنا للاستفسار عن موعد توفره.
+                  </p>
                 </div>
-              )}
+              ) : (
+                <>
+                  <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block">الكمية:</span>
+                  
+                  {quantityInCart === 0 ? (
+                    <button
+                      onClick={onAddToCart}
+                      className="w-full h-12 bg-[#ea1b25] hover:bg-[#c9141d] active:scale-[0.99] text-white font-bold text-base rounded-xl transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg cursor-pointer"
+                    >
+                      <ShoppingCart className="w-5 h-5" />
+                      <span>أضف إلى السلة</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center justify-between bg-gray-100 dark:bg-[#2a2a2a] p-1.5 rounded-xl border border-gray-300 dark:border-gray-700">
+                      <button
+                        onClick={onIncrementQuantity}
+                        className="w-10 h-10 rounded-lg bg-[#ea1b25] text-white font-black text-xl flex items-center justify-center hover:bg-[#c9141d] transition cursor-pointer"
+                        title="زيادة الكمية"
+                      >
+                        +
+                      </button>
+                      <div className="flex flex-col items-center">
+                        <span className="text-lg font-black text-gray-900 dark:text-white font-mono">
+                          {quantityInCart}
+                        </span>
+                        <span className="text-[10px] text-gray-500 font-bold">في السلة</span>
+                      </div>
+                      <button
+                        onClick={onDecrementQuantity}
+                        className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-black text-xl flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 transition cursor-pointer"
+                        title="إنقاص الكمية"
+                      >
+                        -
+                      </button>
+                    </div>
+                  )}
 
-              {/* Direct Checkout (Place Order) Button */}
-              <button
-                id="placeorderbtn"
-                onClick={onDirectCheckout}
-                className="w-full h-12 bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 font-bold text-base rounded-xl transition flex items-center justify-center gap-2 shadow cursor-pointer"
-              >
-                <span>إتمام الشراء مباشرة</span>
-              </button>
+                  {/* Direct Checkout (Place Order) Button */}
+                  <button
+                    id="placeorderbtn"
+                    onClick={onDirectCheckout}
+                    className="w-full h-12 bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 font-bold text-base rounded-xl transition flex items-center justify-center gap-2 shadow cursor-pointer"
+                  >
+                    <span>إتمام الشراء مباشرة</span>
+                  </button>
+                </>
+              )}
 
               {/* Add to Wishlist Button */}
               <button
