@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product, CartItem, Order, Distributor, StoreSettings, AdminCredentials, DatabaseConfig } from './types';
 import { ALL_INITIAL_PRODUCTS, MAIN_PRODUCT, RELATED_PRODUCTS, CATEGORIES, RZ_OFFICIAL_FALLBACK_LOGO } from './data/products';
+import { JORDAN_OFFICIAL_CATALOG } from './data/jordanCatalog';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { HomeView } from './components/HomeView';
@@ -753,18 +754,23 @@ export default function App() {
     showToast(`تمت إضافة صنف "${newTemplate.name}" إلى الكتالوج بنجاح`);
   };
 
-  const handleAddAllTemplatesToStore = () => {
+  const handleAddAllTemplatesToStore = (customList?: Product[]) => {
+    const listToAdd = customList && customList.length > 0 ? customList : catalogTemplates;
     const existingIds = new Set(productsList.map(p => p.id));
-    const missing = catalogTemplates.filter(p => !existingIds.has(p.id));
+    const existingCodes = new Set(productsList.map(p => p.code?.toUpperCase()));
+    const missing = listToAdd.filter(p => !existingIds.has(p.id) && !existingCodes.has(p.code?.toUpperCase()));
+    
     if (missing.length === 0) {
-      showToast('جميع منتجات الكتالوج الرسمي متوفرة بالفعل في متجرك');
+      showToast('جميع منتجات هذا الكتالوج متوفرة بالفعل في متجرك');
       return;
     }
     const combined = sanitizeProductCatalog([...productsList, ...missing]);
     setProductsList(combined);
-    if (dbConfig.isConfigured) {
-      missing.forEach(prod => saveProductToDatabase(dbConfig, prod).catch(console.warn));
-    }
+    localStorage.setItem('rzoil_jordan_products', JSON.stringify(combined));
+    
+    // Always persist to database backend
+    missing.forEach(prod => saveProductToDatabase(dbConfig, prod).catch(console.warn));
+    
     showToast(`تمت إضافة ${missing.length} صنفاً جديداً وحفظها في قاعدة البيانات بنجاح ✅`);
   };
 

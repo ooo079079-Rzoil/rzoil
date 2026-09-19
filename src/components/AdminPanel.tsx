@@ -40,6 +40,7 @@ import { Product, Order, Distributor, StoreSettings, AdminCredentials, DatabaseC
 import { RzTemplateLibrary } from './RzTemplateLibrary';
 import { InAppModal, InAppDialogProps } from './InAppModal';
 import { RZ_OFFICIAL_FALLBACK_LOGO } from '../data/products';
+import { JORDAN_OFFICIAL_CATALOG } from '../data/jordanCatalog';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -50,7 +51,7 @@ interface AdminPanelProps {
   products: Product[];
   templates?: Product[];
   onAddTemplateToStore?: (template: Product, customPrice: number) => void;
-  onAddAllTemplatesToStore?: () => void;
+  onAddAllTemplatesToStore?: (customList?: Product[]) => void;
   onUpdateTemplate?: (updatedTemplate: Product) => void;
   onAddNewTemplate?: (newTemplate: Product) => void;
   onClearAllProducts?: () => void;
@@ -1000,36 +1001,49 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
 
                   {/* Template Quick Selection */}
-                  {templates && templates.length > 0 && (
-                    <div className="p-3 bg-red-50/80 dark:bg-red-950/30 rounded-xl border border-red-200 dark:border-red-900/50 space-y-1.5">
-                      <label className="block font-bold text-xs text-red-700 dark:text-red-300 flex items-center gap-1.5">
+                  <div className="p-3 bg-red-50/80 dark:bg-red-950/30 rounded-xl border border-red-200 dark:border-red-900/50 space-y-1.5">
+                    <label className="block font-bold text-xs text-red-700 dark:text-red-300 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
                         <Sparkles className="w-4 h-4 text-[#ea1b25]" />
-                        <span>تعبئة سريعة من قوالب رزويل الجاهزة (الصور والشروحات الألمانية الأصلية)</span>
-                      </label>
-                      <select
-                        onChange={(e) => {
-                          const selectedId = e.target.value;
-                          if (!selectedId) return;
-                          const tmpl = templates.find(t => t.id === selectedId);
-                          if (tmpl) {
-                            handleSelectTemplateForForm(tmpl);
-                          }
-                        }}
-                        defaultValue=""
-                        className="w-full h-8 px-2.5 rounded-lg border border-red-300 dark:border-red-800 bg-white dark:bg-[#1a1a1a] text-xs font-bold text-gray-900 dark:text-white focus:outline-none"
-                      >
-                        <option value="">-- اختر قالباً لتعبئة الاسم والصورة والشرح والمواصفات فوراً --</option>
+                        <span>تعبئة سريعة من قوالب رزويل الجاهزة (كتالوج الأردن 🇯🇴 أو كتالوج المصنع 🇩🇪)</span>
+                      </span>
+                      <span className="text-[10px] text-gray-500 font-normal">
+                        يجلب الاسم والصورة والسعر والشرح فوراً
+                      </span>
+                    </label>
+                    <select
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        if (!selectedId) return;
+                        const allAvailable = [...JORDAN_OFFICIAL_CATALOG, ...templates];
+                        const tmpl = allAvailable.find(t => t.id === selectedId);
+                        if (tmpl) {
+                          handleSelectTemplateForForm(tmpl);
+                        }
+                      }}
+                      defaultValue=""
+                      className="w-full h-8 px-2.5 rounded-lg border border-red-300 dark:border-red-800 bg-white dark:bg-[#1a1a1a] text-xs font-bold text-gray-900 dark:text-white focus:outline-none"
+                    >
+                      <option value="">-- اختر قالباً لتعبئة الاسم والصورة والشرح والمواصفات فوراً --</option>
+                      <optgroup label="🇯🇴 كتالوج الأردن المعتمد (47 منتج مطابق لموقع rzoiljo.netlify.app)">
+                        {JORDAN_OFFICIAL_CATALOG.map(t => (
+                          <option key={`jo-${t.id}`} value={t.id}>
+                            {t.name} ({t.price} د.أ) - #{t.code}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="🇩🇪 كتالوج المصنع الشامل (81 منتج)">
                         {templates.map(t => (
-                          <option key={t.id} value={t.id}>
+                          <option key={`tpl-${t.id}`} value={t.id}>
                             {t.name} ({t.category}) - #{t.code}
                           </option>
                         ))}
-                      </select>
-                      <p className="text-[11px] text-gray-500">
-                        عند اختيار أي صنف، يتم جلب صورته وشرحه ومواصفاته فوراً، وتستطيع تعديل السعر والضغط على حفظ!
-                      </p>
-                    </div>
-                  )}
+                      </optgroup>
+                    </select>
+                    <p className="text-[11px] text-gray-500">
+                      عند اختيار أي صنف، يتم جلب صورته وشرحه ومواصفاته وسعره فوراً، وتستطيع تعديل أي بند ثم الضغط على حفظ المنتج!
+                    </p>
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
