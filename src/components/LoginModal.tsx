@@ -80,15 +80,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    // Support current stored credentials, plus default 'admin123' and '123'
-    const storedUser = (adminCredentials.username || 'admin').trim().toLowerCase();
-    const storedPass = adminCredentials.password || 'admin123';
+    // Strictly match current stored credentials from settings/database
+    const storedUser = (adminCredentials.username || '').trim().toLowerCase();
+    const storedPass = adminCredentials.password || '';
 
-    const isUserMatch = inputUser === storedUser || inputUser === 'admin';
-    const isPassMatch = 
-      inputPass === storedPass || 
-      inputPass === 'admin123' || 
-      inputPass === '123';
+    const isUserMatch = inputUser === storedUser;
+    const isPassMatch = inputPass === storedPass;
 
     if (isUserMatch && isPassMatch) {
       setIsAdminSuccess(true);
@@ -98,15 +95,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         setIsAdminSuccess(false);
       }, 500);
     } else {
-      setAdminError('بيانات الدخول غير صحيحة! يرجى التأكد من اسم المستخدم وكلمة المرور');
+      setAdminError('اسم المستخدم أو كلمة المرور غير صحيحة! يرجى التأكد والمحاولة مجدداً');
     }
-  };
-
-  // Quick fill default admin credentials
-  const handleQuickFill = () => {
-    setAdminUser(adminCredentials.username || 'admin');
-    setAdminPass(adminCredentials.password || 'admin123');
-    setAdminError(null);
   };
 
   return (
@@ -278,27 +268,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   </div>
                 </div>
 
-                {/* Initial credentials hint and Quick Auto-fill button */}
-                <div className="p-2.5 bg-gray-50 dark:bg-[#242424] rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2 text-[11px]">
-                  <div>
-                    <span className="text-gray-500">البيانات الافتراضية: </span>
-                    <span className="font-mono font-bold text-gray-800 dark:text-gray-200">admin</span>
-                    <span className="text-gray-400"> / </span>
-                    <span className="font-mono font-bold text-gray-800 dark:text-gray-200">admin123</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleQuickFill}
-                    className="shrink-0 px-2 py-1 rounded bg-red-50 dark:bg-red-950/50 text-[#ea1b25] hover:bg-[#ea1b25] hover:text-white border border-red-200 dark:border-red-900 font-bold text-[10px] transition cursor-pointer flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    <span>تعبئة تلقائية</span>
-                  </button>
-                </div>
-
                 <button
                   type="submit"
-                  className="w-full py-3 bg-[#ea1b25] hover:bg-[#c9141d] active:scale-[0.99] text-white font-bold rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer text-sm"
+                  className="w-full py-3 bg-[#ea1b25] hover:bg-[#c9141d] active:scale-[0.99] text-white font-bold rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer text-sm mt-2"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>دخول وتفعيل لوحة الإدارة</span>

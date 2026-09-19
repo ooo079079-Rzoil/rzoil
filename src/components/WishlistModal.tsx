@@ -44,9 +44,9 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({
               <p className="text-xs">اضغط على زر المفضلة في صفحة أي منتج لحفظه هنا</p>
             </div>
           ) : (
-            wishlistProducts.map((prod) => (
+            wishlistProducts.map((prod, idx) => (
               <div
-                key={prod.id}
+                key={`${prod.id}-${idx}`}
                 className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-[#252525] rounded-xl border border-gray-200 dark:border-gray-700"
               >
                 <div 
@@ -56,7 +56,11 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({
                   <img
                     src={prod.image}
                     alt={prod.name}
+                    referrerPolicy="no-referrer"
                     className="w-14 h-14 object-contain bg-white dark:bg-[#1a1a1a] p-1 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp";
+                    }}
                   />
                   <div className="truncate">
                     <h5 className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white truncate">

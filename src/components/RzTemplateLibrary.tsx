@@ -188,7 +188,7 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
 
       {/* Templates Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filteredTemplates.map(template => {
+        {filteredTemplates.map((template, tIdx) => {
           const activeStoreItem = isTemplateAdded(template);
           const isAdded = !!activeStoreItem;
           const currentPrice = prices[template.id] ?? template.price ?? 10;
@@ -196,7 +196,7 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
 
           return (
             <div
-              key={template.id}
+              key={`${template.id}-${tIdx}`}
               className={`bg-white dark:bg-[#202020] rounded-2xl border transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md ${
                 isAdded 
                   ? 'border-green-400/80 dark:border-green-600/60 ring-1 ring-green-400/30' 

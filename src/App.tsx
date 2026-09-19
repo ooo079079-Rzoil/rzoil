@@ -17,7 +17,15 @@ import { FloatingWidgets } from './components/FloatingWidgets';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { AdminPanel } from './components/AdminPanel';
 import { DatabaseSetupModal } from './components/DatabaseSetupModal';
-import { getSavedDbConfig, checkServerDbStatus, saveOrderToDatabase, clearRemoteProducts, clearRemoteOrders } from './services/databaseService';
+import { 
+  getSavedDbConfig, 
+  checkServerDbStatus, 
+  saveOrderToDatabase, 
+  clearRemoteProducts, 
+  clearRemoteOrders,
+  saveAdminCredentialsToDatabase,
+  fetchAdminCredentialsFromDatabase
+} from './services/databaseService';
 import { Check, ShieldCheck, LogOut } from 'lucide-react';
 
 const INITIAL_ADMIN_CREDS: AdminCredentials = {
@@ -119,6 +127,47 @@ const INITIAL_SETTINGS: StoreSettings = {
   workingHours: 'يومياً من 9:00 صباحاً حتى 9:00 مساءً (السبت - الخميس)'
 };
 
+// Helper to guarantee completely unique product IDs and deduplicated catalog
+function sanitizeProductCatalog(products: Product[]): Product[] {
+  const seenIds = new Set<string>();
+  const seenNames = new Set<string>();
+  const result: Product[] = [];
+
+  for (let i = 0; i < products.length; i++) {
+    const p = products[i];
+    if (!p || !p.name) continue;
+
+    const trimmedName = p.name.trim();
+    // Normalize old numeric IDs e.g. "7681" -> "rz-7681"
+    let cleanId = p.id ? String(p.id).trim() : `prod-${i}-${Date.now()}`;
+    if (/^\d+$/.test(cleanId)) {
+      cleanId = `rz-${cleanId}`;
+    }
+
+    // If ID already seen or duplicate name + volume, ensure uniqueness or skip redundant duplicate
+    if (seenIds.has(cleanId)) {
+      if (seenNames.has(trimmedName + (p.volume || ''))) {
+        // Skip redundant exact duplicate item
+        continue;
+      }
+      cleanId = `${cleanId}-dup-${i}`;
+    }
+
+    seenIds.add(cleanId);
+    seenNames.add(trimmedName + (p.volume || ''));
+
+    result.push({
+      ...p,
+      id: cleanId,
+      code: p.code ? String(p.code).trim() : `RZ-${cleanId}`,
+      image: p.image || 'https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp',
+      images: Array.isArray(p.images) && p.images.length > 0 ? p.images : [p.image || 'https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp'],
+    });
+  }
+
+  return result;
+}
+
 export default function App() {
   // Store Catalog Products
   const [productsList, setProductsList] = useState<Product[]>(() => {
@@ -126,8 +175,49 @@ export default function App() {
     if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Create map of official items from rzoil.net
+          const officialById = new Map<string, Product>();
+          const officialByName = new Map<string, Product>();
+          ALL_INITIAL_PRODUCTS.forEach(p => {
+            if (p.id) officialById.set(p.id, p);
+            // Also map numeric suffix (e.g. "7556" for "rz-7556")
+            const numPart = p.id.replace('rz-', '');
+            officialById.set(numPart, p);
+            if (p.name) officialByName.set(p.name.trim(), p);
+          });
+
+          // Upgrade existing products with official exact rzoil.net images, descriptions and categories
+          const updated: Product[] = parsed.map((p: Product) => {
+            const rawId = p.id ? String(p.id).trim() : '';
+            const match = officialById.get(rawId) || 
+                          officialById.get(`rz-${rawId}`) || 
+                          officialByName.get(p.name?.trim());
+            if (match) {
+              return {
+                ...match,
+                ...p,
+                id: match.id, // Normalize to standard unique id like rz-7556
+                image: match.image || p.image,
+                images: match.images || [match.image || p.image],
+                description: match.description || p.description,
+                subtitle: match.subtitle || p.subtitle,
+                features: match.features?.length ? match.features : p.features,
+                category: match.category || p.category,
+              };
+            }
+            return p;
+          });
+
+          // Deduplicate the updated list
+          const dedupedUpdated = sanitizeProductCatalog(updated);
+
+          // Merge any missing products from the full 81 official catalog
+          const existingIds = new Set(dedupedUpdated.map(p => p.id));
+          const missing = ALL_INITIAL_PRODUCTS.filter(p => !existingIds.has(p.id));
+          const finalProducts = sanitizeProductCatalog([...dedupedUpdated, ...missing]);
+          localStorage.setItem('rzoil_jordan_products', JSON.stringify(finalProducts));
+          return finalProducts;
         }
       } catch (e) { /* ignore */ }
     }
@@ -205,11 +295,23 @@ export default function App() {
     return getSavedDbConfig().isConfigured;
   });
 
-  // Check live status on server mount
+  // Check live status on server mount & sync admin credentials from MySQL
   useEffect(() => {
     checkServerDbStatus(dbConfig.apiEndpoint).then((status) => {
       if (status.isConnected) {
         setIsDbConnected(true);
+      }
+    });
+
+    // Attempt to load admin credentials from MySQL if configured
+    fetchAdminCredentialsFromDatabase(dbConfig).then((res) => {
+      if (res.success && res.username && res.password) {
+        const syncedCreds: AdminCredentials = {
+          username: res.username,
+          password: res.password
+        };
+        setAdminCredentials(syncedCreds);
+        localStorage.setItem('rzoil_admin_auth', JSON.stringify(syncedCreds));
       }
     });
   }, [dbConfig.apiEndpoint]);
@@ -288,7 +390,15 @@ export default function App() {
   const handleUpdateAdminCredentials = (newCreds: AdminCredentials) => {
     setAdminCredentials(newCreds);
     localStorage.setItem('rzoil_admin_auth', JSON.stringify(newCreds));
-    showToast('تم حفظ وتحديث بيانات دخول المشرف بنجاح');
+    
+    // Save to remote MySQL database
+    saveAdminCredentialsToDatabase(dbConfig, newCreds.username, newCreds.password).then((res) => {
+      if (res.success) {
+        showToast('تم حفظ بيانات المشرف الجديدة في قاعدة البيانات بنجاح');
+      } else {
+        showToast('تم الحفظ محلياً (سيتم المزامنة عند الاتصال بقاعدة البيانات)');
+      }
+    });
   };
 
   const handleRequestAdminAccess = () => {
@@ -443,7 +553,7 @@ export default function App() {
   };
 
   const handleAddProduct = (newProd: Product) => {
-    setProductsList(prev => [newProd, ...prev]);
+    setProductsList(prev => sanitizeProductCatalog([newProd, ...prev]));
     showToast(`تم إضافة منتج جديد: ${newProd.name}`);
   };
 
@@ -473,12 +583,27 @@ export default function App() {
   const handleAddTemplateToStore = (template: Product, customPrice?: number) => {
     const newProd: Product = {
       ...template,
-      id: 'prod-' + template.id + '-' + Date.now(),
+      id: template.id.startsWith('rz-') ? template.id : 'rz-' + template.id,
       price: customPrice && customPrice > 0 ? customPrice : template.price,
       inStock: true
     };
-    setProductsList(prev => [newProd, ...prev]);
+    // If product already exists with this ID, replace/update it or ensure uniqueness
+    setProductsList(prev => {
+      const filtered = prev.filter(p => p.id !== newProd.id && p.name !== newProd.name);
+      return sanitizeProductCatalog([newProd, ...filtered]);
+    });
     showToast(`تمت إضافة ${template.name} إلى المتجر بنجاح`);
+  };
+
+  const handleAddAllTemplatesToStore = () => {
+    const existingIds = new Set(productsList.map(p => p.id));
+    const missing = ALL_INITIAL_PRODUCTS.filter(p => !existingIds.has(p.id));
+    if (missing.length === 0) {
+      showToast('جميع منتجات الكتالوج الرسمي متوفرة بالفعل في متجرك');
+      return;
+    }
+    setProductsList(prev => sanitizeProductCatalog([...prev, ...missing]));
+    showToast(`تمت إضافة ${missing.length} صنفاً جديداً من كتالوج رزويل الرسمي إلى متجرك بنجاح`);
   };
 
   const handleUpdateOrderStatus = (orderId: string, status: Order['status']) => {
@@ -741,6 +866,7 @@ export default function App() {
         adminCredentials={adminCredentials}
         onUpdateAdminCredentials={handleUpdateAdminCredentials}
         products={productsList}
+        templates={ALL_INITIAL_PRODUCTS}
         onUpdateProductPrice={handleUpdateProductPrice}
         onToggleProductStock={handleToggleProductStock}
         onAddProduct={handleAddProduct}
@@ -748,6 +874,7 @@ export default function App() {
         onClearAllProducts={handleClearAllProducts}
         onClearAllOrders={handleClearAllOrders}
         onAddTemplateToStore={handleAddTemplateToStore}
+        onAddAllTemplatesToStore={handleAddAllTemplatesToStore}
         orders={orders}
         onUpdateOrderStatus={handleUpdateOrderStatus}
         onDeleteOrder={handleDeleteOrder}

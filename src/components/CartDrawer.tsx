@@ -67,15 +67,19 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </button>
               </div>
             ) : (
-              cartItems.map((item) => (
+              cartItems.map((item, idx) => (
                 <div
-                  key={item.product.id}
+                  key={`${item.product.id}-${idx}`}
                   className="flex gap-3 p-3 bg-gray-50 dark:bg-[#242424] rounded-xl border border-gray-200/80 dark:border-gray-800 items-center"
                 >
                   <img
                     src={item.product.image}
                     alt={item.product.name}
+                    referrerPolicy="no-referrer"
                     className="w-16 h-16 object-contain bg-white dark:bg-[#1a1a1a] p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp";
+                    }}
                   />
                   
                   <div className="flex-1 min-w-0">

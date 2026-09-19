@@ -23,12 +23,12 @@ export const RelatedProducts: React.FC<RelatedProductsProps> = ({
   const section1 = products.slice(0, 6);
   const section2 = products.slice(6);
 
-  const renderProductCard = (item: Product) => {
+  const renderProductCard = (item: Product, idx: number) => {
     const qty = cartQuantities[item.id] || 0;
 
     return (
       <div
-        key={item.id}
+        key={`${item.id}-${idx}`}
         className="cardw ypx min-w-[210px] w-[220px] sm:w-[240px] shrink-0 bg-white dark:bg-[#202020] rounded-xl border border-gray-200 dark:border-gray-800 p-3 flex flex-col justify-between hover:shadow-lg transition-all group"
       >
         {/* Product Image & Quick Link */}
@@ -40,8 +40,12 @@ export const RelatedProducts: React.FC<RelatedProductsProps> = ({
             <img
               src={item.image}
               alt={item.name}
+              referrerPolicy="no-referrer"
               className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-200"
               loading="lazy"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp";
+              }}
             />
             <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <span className="bg-[#ea1b25] text-white text-xs font-bold py-1 px-2.5 rounded-full flex items-center gap-1 shadow">

@@ -258,13 +258,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 pt-6">
-            {filteredProducts.map((product) => {
+            {filteredProducts.map((product, pIdx) => {
               const inWishlist = wishlistIds.includes(product.id);
               const qty = cartQuantities[product.id] || 0;
 
               return (
                 <div
-                  key={product.id}
+                  key={`${product.id}-${pIdx}`}
                   className="group relative bg-white dark:bg-[#202020] rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-red-400 dark:hover:border-red-800 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden"
                 >
                   {/* Badges & Wishlist */}

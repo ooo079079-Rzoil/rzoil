@@ -145,6 +145,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
               id="prdcimage"
               src={product.image}
               alt={product.name}
+              referrerPolicy="no-referrer"
               className={`max-w-full max-h-full object-contain transition-transform duration-300 ${
                 isZoomed ? 'scale-125' : 'group-hover:scale-105'
               }`}

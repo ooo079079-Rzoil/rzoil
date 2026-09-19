@@ -192,6 +192,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [securitySuccessMsg, setSecuritySuccessMsg] = useState<string | null>(null);
   const [securityErrorMsg, setSecurityErrorMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    setNewUsernameInput(adminCredentials.username);
+  }, [adminCredentials.username, isOpen]);
+
   if (!isOpen) return null;
 
   // Calculation for overview
@@ -1217,14 +1221,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                      {filteredProducts.map((p) => (
-                        <tr key={p.id} className="hover:bg-gray-50/70 dark:hover:bg-[#252525]">
+                      {filteredProducts.map((p, pIdx) => (
+                        <tr key={`${p.id}-${pIdx}`} className="hover:bg-gray-50/70 dark:hover:bg-[#252525]">
                           <td className="p-3">
                             <div className="flex items-center gap-2.5">
                               <img
                                 src={p.image}
                                 alt={p.name}
+                                referrerPolicy="no-referrer"
                                 className="w-10 h-10 object-contain p-1 rounded bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-700 shrink-0"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp";
+                                }}
                               />
                               <div>
                                 <div className="font-bold text-gray-900 dark:text-white line-clamp-1">{p.name}</div>
