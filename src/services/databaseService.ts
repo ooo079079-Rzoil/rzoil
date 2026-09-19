@@ -3,12 +3,12 @@ import { DatabaseConfig, DatabaseStatus, Order, Product, Distributor } from '../
 const STORAGE_KEY = 'rzoil_infinityfree_db_config';
 
 export const DEFAULT_DB_CONFIG: DatabaseConfig = {
-  dbHost: '',
-  dbName: '',
-  dbUser: '',
-  dbPass: '',
+  dbHost: 'sql101.infinityfree.com',
+  dbName: 'if0_42956889_rzoil',
+  dbUser: 'if0_42956889',
+  dbPass: 'nmoA7jsmA8c9ODH',
   apiEndpoint: './api.php',
-  isConfigured: false,
+  isConfigured: true,
   autoSync: true
 };
 
