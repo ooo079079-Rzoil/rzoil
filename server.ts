@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+import { JORDAN_OFFICIAL_CATALOG } from './src/data/jordanCatalog';
 
 // ESM path setup
 const __filename = fileURLToPath(import.meta.url);
@@ -19,7 +20,7 @@ if (!fs.existsSync(DATA_DIR)) {
 
 // Initial defaults if store is fresh
 const DEFAULT_STORE = {
-  products: [],
+  products: JORDAN_OFFICIAL_CATALOG || [],
   orders: [
     {
       id: 'ord-101',
@@ -82,7 +83,11 @@ function readStore() {
   try {
     if (fs.existsSync(STORE_FILE)) {
       const data = fs.readFileSync(STORE_FILE, 'utf-8');
-      return JSON.parse(data);
+      const store = JSON.parse(data);
+      if (!store.products || store.products.length === 0) {
+        store.products = JORDAN_OFFICIAL_CATALOG;
+      }
+      return store;
     }
   } catch (e) {
     console.error('Error reading store file:', e);

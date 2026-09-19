@@ -34,7 +34,8 @@ import {
   Server,
   Zap,
   Download,
-  Sparkles
+  Sparkles,
+  BellRing
 } from 'lucide-react';
 import { Product, Order, Distributor, StoreSettings, AdminCredentials, DatabaseConfig } from '../types';
 import { RzTemplateLibrary } from './RzTemplateLibrary';
@@ -468,54 +469,48 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity" 
-        onClick={onClose} 
-      />
-
-      {/* Admin Panel Card */}
-      <div className="relative w-full max-w-5xl bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl overflow-hidden z-10 border border-gray-200 dark:border-gray-700 max-h-[92vh] flex flex-col animate-scale-up">
-        
-        {/* Unified Red Signature Header */}
-        <div className="bg-[#ea1b25] text-white p-4 flex items-center justify-between shrink-0 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white font-black shadow-inner">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base sm:text-lg">لوحة تحكم إدارة متجر رزويل الأردن</h3>
-                <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  مشرف النظام: {adminCredentials.username}
-                </span>
-              </div>
-              <p className="text-[11px] text-white/80">RZ Oil Deutschland GmbH - إدارة المتجر والطلبات في المملكة الأردنية الهاشمية</p>
-            </div>
+    <div className="fixed inset-0 z-[100] w-screen h-screen bg-gray-100 dark:bg-[#121212] flex flex-col overflow-hidden dir-rtl font-sans text-gray-900 dark:text-gray-100 animate-fade-in">
+      {/* Full Width Dedicated Header Bar */}
+      <div className="bg-[#ea1b25] text-white px-4 sm:px-6 py-3.5 flex items-center justify-between shrink-0 shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white font-black shadow-inner">
+            <ShieldCheck className="w-6 h-6" />
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onLogout}
-              className="px-3 py-1.5 bg-black/25 hover:bg-black/40 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-white/20"
-              title="تسجيل خروج من حساب الإدارة"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">تسجيل خروج</span>
-            </button>
-            <button 
-              onClick={onClose} 
-              className="p-1 hover:bg-white/20 rounded-full transition cursor-pointer text-white"
-              title="إغلاق لوحة الإدارة"
-            >
-              <X className="w-6 h-6" />
-            </button>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-extrabold text-base sm:text-xl tracking-tight">لوحة تحكم إدارة متجر رزويل الأردن</h1>
+              <span className="bg-white/20 text-white text-xs font-bold px-2.5 py-0.5 rounded-full border border-white/20">
+                مشرف النظام: {adminCredentials.username}
+              </span>
+            </div>
+            <p className="text-xs text-white/80 hidden sm:block mt-0.5">
+              RZ Oil Deutschland GmbH - لوحة الشاشة الكاملة لإدارة المنتجات، الطلبات الواردة، والموزعين المعتمدين
+            </p>
           </div>
         </div>
 
-        {/* Navigation Tabs Bar */}
-        <div className="flex items-center gap-1 overflow-x-auto bg-gray-100 dark:bg-[#222222] p-2 border-b border-gray-200 dark:border-gray-800 shrink-0 text-xs font-bold">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onClose}
+            className="px-3.5 py-2 bg-white/15 hover:bg-white/25 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer border border-white/30 shadow-xs"
+            title="الرجوع لصفحة المتجر الرئيسية"
+          >
+            <span>الرجوع للمتجر 🏬</span>
+          </button>
+
+          <button
+            onClick={onLogout}
+            className="px-3 py-2 bg-black/30 hover:bg-black/50 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer border border-white/20"
+            title="تسجيل خروج من حساب الإدارة"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">تسجيل خروج</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Navigation Tabs Bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto bg-white dark:bg-[#1c1c1c] px-4 py-2.5 border-b border-gray-200 dark:border-gray-800 shrink-0 text-xs sm:text-sm font-bold shadow-xs">
           <button
             onClick={() => setActiveTab('overview')}
             className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
@@ -530,17 +525,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer relative ${
               activeTab === 'orders'
-                ? 'bg-[#ea1b25] text-white shadow-sm'
+                ? 'bg-[#ea1b25] text-white shadow-md'
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#2d2d2d]'
             }`}
           >
             <ShoppingCart className="w-4 h-4" />
             <span>إدارة الطلبات الواردة</span>
             {pendingOrdersCount > 0 && (
-              <span className="px-1.5 py-0.2 bg-white text-[#ea1b25] rounded-full text-[10px] font-black">
-                {pendingOrdersCount}
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-300 text-gray-900 rounded-full text-[11px] font-black shadow-xs animate-bounce">
+                <BellRing className="w-3 h-3 text-[#ea1b25] animate-pulse" />
+                <span>{pendingOrdersCount} جديد</span>
               </span>
             )}
           </button>
@@ -626,7 +622,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
 
         {/* Tab Content Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50/50 dark:bg-[#151515]">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50/70 dark:bg-[#121212]">
+          <div className="max-w-7xl mx-auto space-y-6">
           
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
@@ -832,16 +829,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {filteredOrders.map((order) => (
+                  {filteredOrders.map((order, index) => (
                     <div 
                       key={order.id}
                       className="bg-white dark:bg-[#202020] rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm space-y-3"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono font-bold text-sm text-[#ea1b25]">{order.orderNumber}</span>
-                          <span className="font-bold text-gray-900 dark:text-white text-sm">{order.customerName}</span>
-                          <span className="text-xs text-gray-400 font-mono">{order.createdAt}</span>
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                          <span className="font-mono font-extrabold text-xs sm:text-sm bg-[#ea1b25]/10 dark:bg-[#ea1b25]/20 text-[#ea1b25] px-2.5 py-1 rounded-lg border border-[#ea1b25]/30">
+                            طلب #{index + 1} ({order.orderNumber})
+                          </span>
+                          <span className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">{order.customerName}</span>
+                          <span className="text-[11px] text-gray-400 font-mono hidden sm:inline">{order.createdAt}</span>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -2477,9 +2476,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </div>
           )}
 
+          </div>
         </div>
-
-      </div>
 
       {/* In-App Custom Interactive Modal / Dialog */}
       <InAppModal {...dialog} />

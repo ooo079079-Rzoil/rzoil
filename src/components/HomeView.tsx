@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Product } from '../types';
 import { RZ_OFFICIAL_FALLBACK_LOGO } from '../data/products';
+import { GoldenFalconCard } from './GoldenFalconCard';
 import { 
   ShieldCheck, 
   Award, 
@@ -99,56 +100,64 @@ export const HomeView: React.FC<HomeViewProps> = ({
       <section className="relative overflow-hidden bg-gradient-to-b from-[#181818] via-[#222222] to-[#181818] text-white py-10 sm:py-14 border-b border-gray-800">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ea1b25_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="relative max-w-[1280px] mx-auto px-4 sm:px-6">
-          <div className="max-w-3xl space-y-4">
-            {/* German Badge */}
-            <div className="inline-flex items-center gap-2 bg-red-950/80 border border-red-800/80 text-red-300 px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-[#ea1b25] animate-ping"></span>
-              <span>منتجات ألمانية أصلية 100% حاصلة على اعتماد TÜV العالمية</span>
-            </div>
-
-            {/* Main Headline */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
-              رزويل الأردن <span className="text-[#ea1b25]">RZ Oil</span>
-              <span className="block text-xl sm:text-2xl font-bold text-gray-300 mt-2 font-sans">
-                الزيوت والإضافات الألمانية الرائدة لمحركات فائقة الأداء
-              </span>
-            </h1>
-
-            {/* Subtext */}
-            <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
-              الموزع المعتمد لكافة منتجات <strong className="text-white">رزويل الألمانية (RZ Germany)</strong> في المملكة الأردنية الهاشمية. حلول احترافية متطورة لتنظيف دورات الوقود (GDI)، حماية المحركات بالسيراميك، وزيوت التخليق الكامل PAO.
-            </p>
-
-            {/* Value Highlights */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2 text-xs">
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-2.5">
-                <Truck className="w-4 h-4 text-[#ea1b25] shrink-0" />
-                <span>توصيل لكافة محافظات الأردن</span>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Right Side: Main Store Details */}
+            <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+              {/* German Badge */}
+              <div className="inline-flex items-center gap-2 bg-red-950/80 border border-red-800/80 text-red-300 px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-[#ea1b25] animate-ping"></span>
+                <span>منتجات ألمانية أصلية 100% حاصلة على اعتماد TÜV العالمية</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-2.5">
-                <ShieldCheck className="w-4 h-4 text-green-400 shrink-0" />
-                <span>دفع عند الاستلام بالدينار (JOD)</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-2.5 col-span-2 sm:col-span-1">
-                <Award className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>معتمد من TÜV الألمانية</span>
-              </div>
-            </div>
 
-            {/* Quick Hero Search */}
-            <div className="pt-2">
-              <div className="relative max-w-xl">
-                <input
-                  type="text"
-                  placeholder="ابحث بالاسم أو كود الصنف (مثل: RZ21G، زيت 5W-30، سيراميك...)"
-                  value={localSearch}
-                  onChange={(e) => setLocalSearch(e.target.value)}
-                  className="w-full h-12 pr-4 pl-12 rounded-xl bg-white dark:bg-[#282828] text-gray-900 dark:text-white border-2 border-gray-300 dark:border-gray-700 text-sm focus:outline-none focus:border-[#ea1b25] shadow-lg transition"
-                />
-                <div className="absolute left-3 top-3.5 text-gray-400">
-                  <Search className="w-5 h-5" />
+              {/* Main Headline */}
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
+                رزويل الأردن <span className="text-[#ea1b25]">RZ Oil</span>
+                <span className="block text-xl sm:text-2xl font-bold text-gray-300 mt-2 font-sans">
+                  الزيوت والإضافات الألمانية الرائدة لمحركات فائقة الأداء
+                </span>
+              </h1>
+
+              {/* Subtext */}
+              <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
+                الموزع المعتمد لكافة منتجات <strong className="text-white">رزويل الألمانية (RZ Germany)</strong> في المملكة الأردنية الهاشمية. حلول احترافية متطورة لتنظيف دورات الوقود (GDI)، حماية المحركات بالسيراميك، وزيوت التخليق الكامل PAO.
+              </p>
+
+              {/* Value Highlights */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2 text-xs">
+                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-2.5">
+                  <Truck className="w-4 h-4 text-[#ea1b25] shrink-0" />
+                  <span>توصيل لكافة محافظات الأردن</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-2.5">
+                  <ShieldCheck className="w-4 h-4 text-green-400 shrink-0" />
+                  <span>دفع عند الاستلام بالدينار (JOD)</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-2.5 col-span-2 sm:col-span-1">
+                  <Award className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>معتمد من TÜV الألمانية</span>
                 </div>
               </div>
+
+              {/* Quick Hero Search */}
+              <div className="pt-2">
+                <div className="relative max-w-xl">
+                  <input
+                    type="text"
+                    placeholder="ابحث بالاسم أو كود الصنف (مثل: RZ21G، زيت 5W-30، سيراميك...)"
+                    value={localSearch}
+                    onChange={(e) => setLocalSearch(e.target.value)}
+                    className="w-full h-12 pr-4 pl-12 rounded-xl bg-white dark:bg-[#282828] text-gray-900 dark:text-white border-2 border-gray-300 dark:border-gray-700 text-sm focus:outline-none focus:border-[#ea1b25] shadow-lg transition"
+                  />
+                  <div className="absolute left-3 top-3.5 text-gray-400">
+                    <Search className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Left Side: Golden Falcon Logo & Management Banner (Scribbled Area) */}
+            <div className="lg:col-span-5 xl:col-span-4 flex justify-center">
+              <GoldenFalconCard />
             </div>
           </div>
         </div>

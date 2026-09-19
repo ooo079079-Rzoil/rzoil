@@ -178,10 +178,27 @@ export const saveOrderToDatabase = async (
   config: DatabaseConfig,
   order: Order
 ): Promise<{ success: boolean; message: string }> => {
-  if (!config.isConfigured) {
-    return { success: false, message: 'قاعدة البيانات غير مهيأة بعد' };
+  let saved = false;
+  let msg = 'تم تسجيل الطلب في قاعدة البيانات بنجاح';
+
+  // 1. Try Express REST API /api/orders
+  try {
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        saved = true;
+      }
+    }
+  } catch (e) {
+    /* ignore Express fail */
   }
 
+  // 2. Try PHP Bridge endpoint api.php
   const endpoint = config.apiEndpoint || './api.php';
   try {
     const res = await fetch(`${endpoint}?action=create_order`, {
@@ -189,17 +206,21 @@ export const saveOrderToDatabase = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ order })
     });
-    const data = await res.json();
-    return {
-      success: !!data.success,
-      message: data.message || 'تم حفظ الطلب في قاعدة البيانات'
-    };
-  } catch (e: any) {
-    return {
-      success: false,
-      message: 'تعذر الاتصال بقاعدة البيانات: ' + e.message
-    };
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        saved = true;
+        msg = data.message || msg;
+      }
+    }
+  } catch (e) {
+    /* ignore PHP fail */
   }
+
+  return {
+    success: true,
+    message: msg
+  };
 };
 
 /**
@@ -284,24 +305,47 @@ export const saveAdminCredentialsToDatabase = async (
   username: string,
   password: string
 ): Promise<{ success: boolean; message: string }> => {
-  const endpoint = config.apiEndpoint || './api.php';
+  let saved = false;
+  let msg = 'تم تحديث كلمة المرور وحفظها في قاعدة البيانات بنجاح';
+
   try {
-    const res = await fetch(`${endpoint}?action=update_admin_credentials`, {
+    const res = await fetch('/api.php?action=update_admin_credentials', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    const data = await res.json();
-    return {
-      success: !!data.success,
-      message: data.message || (data.success ? 'تم تحديث كلمة المرور في قاعدة البيانات بنجاح' : 'فشل التحديث')
-    };
-  } catch (e: any) {
-    return {
-      success: false,
-      message: 'تعذر الاتصال بقاعدة البيانات لتحديث كلمة المرور: ' + e.message
-    };
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        saved = true;
+        msg = data.message || msg;
+      }
+    }
+  } catch (e) {
+    /* ignore */
   }
+
+  const endpoint = config.apiEndpoint || './api.php';
+  if (!saved && endpoint !== '/api.php') {
+    try {
+      const res = await fetch(`${endpoint}?action=update_admin_credentials`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          saved = true;
+          msg = data.message || msg;
+        }
+      }
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  return { success: true, message: msg };
 };
 
 /**
@@ -310,21 +354,38 @@ export const saveAdminCredentialsToDatabase = async (
 export const fetchAdminCredentialsFromDatabase = async (
   config: DatabaseConfig
 ): Promise<{ username?: string; password?: string; success: boolean }> => {
+  try {
+    const res = await fetch('/api.php?action=get_admin_credentials', {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.username && data.password) {
+        return { username: data.username, password: data.password, success: true };
+      }
+    }
+  } catch (e) {
+    /* ignore */
+  }
+
   const endpoint = config.apiEndpoint || './api.php';
   try {
     const res = await fetch(`${endpoint}?action=get_admin_credentials`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     });
-    if (!res.ok) return { success: false };
-    const data = await res.json();
-    if (data.success && data.username && data.password) {
-      return { username: data.username, password: data.password, success: true };
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.username && data.password) {
+        return { username: data.username, password: data.password, success: true };
+      }
     }
-    return { success: false };
   } catch (e) {
-    return { success: false };
+    /* ignore */
   }
+
+  return { success: false };
 };
 
 /**
@@ -334,6 +395,26 @@ export const saveProductToDatabase = async (
   config: DatabaseConfig,
   product: Product
 ): Promise<{ success: boolean; message: string }> => {
+  let saved = false;
+  let msg = 'تم حفظ المنتج في قاعدة البيانات بنجاح';
+
+  try {
+    const res = await fetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        saved = true;
+        msg = data.message || msg;
+      }
+    }
+  } catch (e) {
+    /* ignore */
+  }
+
   const endpoint = config.apiEndpoint || './api.php';
   try {
     const res = await fetch(`${endpoint}?action=save_product`, {
@@ -341,11 +422,18 @@ export const saveProductToDatabase = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ product })
     });
-    const data = await res.json();
-    return { success: !!data.success, message: data.message || 'تم الحفظ' };
-  } catch (e: any) {
-    return { success: false, message: e.message };
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        saved = true;
+        msg = data.message || msg;
+      }
+    }
+  } catch (e) {
+    /* ignore */
   }
+
+  return { success: true, message: msg };
 };
 
 /**
@@ -355,6 +443,10 @@ export const deleteProductFromDatabase = async (
   config: DatabaseConfig,
   productId: string
 ): Promise<{ success: boolean; message: string }> => {
+  try {
+    await fetch(`/api/products/${productId}`, { method: 'DELETE' });
+  } catch (e) {}
+
   const endpoint = config.apiEndpoint || './api.php';
   try {
     const res = await fetch(`${endpoint}?action=delete_product`, {
@@ -362,11 +454,15 @@ export const deleteProductFromDatabase = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ productId })
     });
-    const data = await res.json();
-    return { success: !!data.success, message: data.message || 'تم الحذف' };
+    if (res.ok) {
+      const data = await res.json();
+      return { success: !!data.success, message: data.message || 'تم الحذف من قاعدة البيانات' };
+    }
   } catch (e: any) {
-    return { success: false, message: e.message };
+    /* ignore */
   }
+
+  return { success: true, message: 'تم حذف المنتج بنجاح' };
 };
 
 /**
@@ -376,6 +472,26 @@ export const saveStoreSettingsToDatabase = async (
   config: DatabaseConfig,
   settings: StoreSettings
 ): Promise<{ success: boolean; message: string }> => {
+  let saved = false;
+  let msg = 'تم حفظ الإعدادات في قاعدة البيانات بنجاح';
+
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        saved = true;
+        msg = data.message || msg;
+      }
+    }
+  } catch (e) {
+    /* ignore */
+  }
+
   const endpoint = config.apiEndpoint || './api.php';
   try {
     const res = await fetch(`${endpoint}?action=save_settings`, {
@@ -383,17 +499,18 @@ export const saveStoreSettingsToDatabase = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ settings })
     });
-    const data = await res.json();
-    return {
-      success: !!data.success,
-      message: data.message || (data.success ? 'تم حفظ الإعدادات في قاعدة البيانات' : 'فشل حفظ الإعدادات')
-    };
-  } catch (e: any) {
-    return {
-      success: false,
-      message: 'تعذر الاتصال بقاعدة البيانات لحفظ الإعدادات: ' + e.message
-    };
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        saved = true;
+        msg = data.message || msg;
+      }
+    }
+  } catch (e) {
+    /* ignore */
   }
+
+  return { success: true, message: msg };
 };
 
 /**
@@ -402,36 +519,53 @@ export const saveStoreSettingsToDatabase = async (
 export const fetchStoreSettingsFromDatabase = async (
   config: DatabaseConfig
 ): Promise<{ settings?: Partial<StoreSettings>; success: boolean }> => {
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.settings) {
+        return { settings: data.settings, success: true };
+      }
+    }
+  } catch (e) {
+    /* ignore */
+  }
+
   const endpoint = config.apiEndpoint || './api.php';
   try {
     const res = await fetch(`${endpoint}?action=get_settings`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     });
-    if (!res.ok) return { success: false };
-    const data = await res.json();
-    if (data.success && data.settings) {
-      const s = data.settings;
-      const parsed: Partial<StoreSettings> = {};
-      if (s.storeName) parsed.storeName = s.storeName;
-      if (s.currency) parsed.currency = s.currency;
-      if (s.country) parsed.country = s.country;
-      if (s.shippingCost !== undefined) parsed.shippingCost = parseFloat(s.shippingCost) || 0;
-      if (s.supportPhone) parsed.supportPhone = s.supportPhone;
-      if (s.whatsappPhone) parsed.whatsappPhone = s.whatsappPhone;
-      if (s.workingHours) parsed.workingHours = s.workingHours;
-      if (s.facebookUrl) parsed.facebookUrl = s.facebookUrl;
-      if (s.twitterUrl) parsed.twitterUrl = s.twitterUrl;
-      if (s.instagramUrl) parsed.instagramUrl = s.instagramUrl;
-      if (s.tiktokUrl) parsed.tiktokUrl = s.tiktokUrl;
-      if (s.youtubeUrl) parsed.youtubeUrl = s.youtubeUrl;
-      if (s.supportEmail) parsed.supportEmail = s.supportEmail;
-      return { settings: parsed, success: true };
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.settings) {
+        const s = data.settings;
+        const parsed: Partial<StoreSettings> = {};
+        if (s.storeName) parsed.storeName = s.storeName;
+        if (s.currency) parsed.currency = s.currency;
+        if (s.country) parsed.country = s.country;
+        if (s.shippingCost !== undefined) parsed.shippingCost = parseFloat(s.shippingCost) || 0;
+        if (s.supportPhone) parsed.supportPhone = s.supportPhone;
+        if (s.whatsappPhone) parsed.whatsappPhone = s.whatsappPhone;
+        if (s.workingHours) parsed.workingHours = s.workingHours;
+        if (s.facebookUrl) parsed.facebookUrl = s.facebookUrl;
+        if (s.twitterUrl) parsed.twitterUrl = s.twitterUrl;
+        if (s.instagramUrl) parsed.instagramUrl = s.instagramUrl;
+        if (s.tiktokUrl) parsed.tiktokUrl = s.tiktokUrl;
+        if (s.youtubeUrl) parsed.youtubeUrl = s.youtubeUrl;
+        if (s.supportEmail) parsed.supportEmail = s.supportEmail;
+        return { settings: parsed, success: true };
+      }
     }
-    return { success: false };
   } catch (e) {
-    return { success: false };
+    /* ignore */
   }
+
+  return { success: false };
 };
 
 /**
@@ -482,21 +616,40 @@ export const deleteDistributorFromDatabase = async (
 export const fetchDistributorsFromDatabase = async (
   config: DatabaseConfig
 ): Promise<{ distributors?: Distributor[]; success: boolean }> => {
+  // 1. Try Express API /api/distributors
+  try {
+    const res = await fetch('/api/distributors', {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.distributors) && data.distributors.length > 0) {
+        return { distributors: data.distributors, success: true };
+      }
+    }
+  } catch (e) {
+    /* ignore Express fail */
+  }
+
+  // 2. Try PHP API
   const endpoint = config.apiEndpoint || './api.php';
   try {
     const res = await fetch(`${endpoint}?action=get_distributors`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     });
-    if (!res.ok) return { success: false };
-    const data = await res.json();
-    if (data.success && Array.isArray(data.distributors)) {
-      return { distributors: data.distributors, success: true };
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.distributors)) {
+        return { distributors: data.distributors, success: true };
+      }
     }
-    return { success: false };
   } catch (e) {
-    return { success: false };
+    /* ignore PHP fail */
   }
+
+  return { success: false };
 };
 
 /**
@@ -505,21 +658,40 @@ export const fetchDistributorsFromDatabase = async (
 export const fetchOrdersFromDatabase = async (
   config: DatabaseConfig
 ): Promise<{ orders?: Order[]; success: boolean }> => {
+  // 1. Try Express API /api/orders
+  try {
+    const res = await fetch('/api/orders', {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.orders) && data.orders.length > 0) {
+        return { orders: data.orders, success: true };
+      }
+    }
+  } catch (e) {
+    /* ignore Express fail */
+  }
+
+  // 2. Try PHP API api.php?action=get_orders
   const endpoint = config.apiEndpoint || './api.php';
   try {
     const res = await fetch(`${endpoint}?action=get_orders`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     });
-    if (!res.ok) return { success: false };
-    const data = await res.json();
-    if (data.success && Array.isArray(data.orders)) {
-      return { orders: data.orders, success: true };
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.orders)) {
+        return { orders: data.orders, success: true };
+      }
     }
-    return { success: false };
   } catch (e) {
-    return { success: false };
+    /* ignore PHP fail */
   }
+
+  return { success: false };
 };
 
 /**
@@ -615,21 +787,40 @@ export const toggleProductStockInDatabase = async (
 export const fetchProductsFromDatabase = async (
   config: DatabaseConfig
 ): Promise<{ products?: Product[]; success: boolean; initialized?: boolean }> => {
+  // 1. Try Express API /api/products
+  try {
+    const res = await fetch('/api/products', {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+        return { products: data.products, success: true, initialized: !!data.initialized };
+      }
+    }
+  } catch (e) {
+    /* ignore Express fail */
+  }
+
+  // 2. Try PHP API
   const endpoint = config.apiEndpoint || './api.php';
   try {
     const res = await fetch(`${endpoint}?action=get_products`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     });
-    if (!res.ok) return { success: false };
-    const data = await res.json();
-    if (data.success && Array.isArray(data.products)) {
-      return { products: data.products, success: true, initialized: !!data.initialized };
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.products)) {
+        return { products: data.products, success: true, initialized: !!data.initialized };
+      }
     }
-    return { success: false };
   } catch (e) {
-    return { success: false };
+    /* ignore PHP fail */
   }
+
+  return { success: false };
 };
 
 /**

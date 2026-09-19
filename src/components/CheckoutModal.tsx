@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, Truck, Phone, MessageSquare, MapPin, User, ShieldCheck } from 'lucide-react';
 import { Product, CartItem, Order } from '../types';
 
@@ -11,6 +11,7 @@ interface CheckoutModalProps {
   onOrderSuccess: () => void;
   onPlaceOrder?: (order: Order) => void;
   shippingCost?: number;
+  existingOrders?: Order[];
 }
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
@@ -21,7 +22,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   cartItems = [],
   onOrderSuccess,
   onPlaceOrder,
-  shippingCost = 3
+  shippingCost = 3,
+  existingOrders = []
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -31,6 +33,26 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+
+  // Reset completion state whenever modal opens or closes
+  useEffect(() => {
+    if (isOpen) {
+      setIsCompleted(false);
+      setIsSubmitting(false);
+      setOrderNumber('');
+    }
+  }, [isOpen]);
+
+  const handleCloseModal = () => {
+    setIsCompleted(false);
+    setIsSubmitting(false);
+    setOrderNumber('');
+    setName('');
+    setPhone('');
+    setAddress('');
+    setNotes('');
+    onClose();
+  };
 
   if (!isOpen) return null;
 
@@ -52,7 +74,29 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
-      const generatedOrder = 'RZ-' + Math.floor(100000 + Math.random() * 900000);
+
+      // Find highest existing order sequence number
+      let highestSeq = 0;
+      if (Array.isArray(existingOrders) && existingOrders.length > 0) {
+        existingOrders.forEach(ord => {
+          if (ord.orderNumber) {
+            const match = ord.orderNumber.match(/\d+/);
+            if (match) {
+              const num = parseInt(match[0], 10);
+              // Filter reasonable sequential numbers
+              if (num > highestSeq && num < 100000) {
+                highestSeq = num;
+              }
+            }
+          }
+        });
+        if (highestSeq === 0) {
+          highestSeq = existingOrders.length;
+        }
+      }
+
+      const nextNumber = highestSeq + 1;
+      const generatedOrder = `RZ-${String(nextNumber).padStart(3, '0')}`;
       setOrderNumber(generatedOrder);
 
       const createdOrder: Order = {
@@ -107,7 +151,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-        onClick={onClose}
+        onClick={handleCloseModal}
       />
 
       {/* Modal Card */}
@@ -120,7 +164,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <h3 className="font-bold text-lg">إتمام الطلب والشحن</h3>
           </div>
           <button 
-            onClick={onClose}
+            onClick={handleCloseModal}
             className="p-1 hover:bg-white/20 rounded-full transition cursor-pointer"
             title="إغلاق"
           >
@@ -148,7 +192,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleCloseModal}
               className="w-full py-3 bg-[#ea1b25] text-white rounded-xl font-bold hover:bg-[#c9141d] transition cursor-pointer"
             >
               متابعة التسوق

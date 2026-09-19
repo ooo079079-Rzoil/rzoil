@@ -59,7 +59,7 @@ const INITIAL_DISTRIBUTORS: Distributor[] = [
 const INITIAL_ORDERS: Order[] = [
   {
     id: 'ord-101',
-    orderNumber: 'RZ-849201',
+    orderNumber: 'RZ-001',
     customerName: 'طارق المجالي',
     phone: '0795543210',
     city: 'عمان',
@@ -82,7 +82,7 @@ const INITIAL_ORDERS: Order[] = [
   },
   {
     id: 'ord-102',
-    orderNumber: 'RZ-519302',
+    orderNumber: 'RZ-002',
     customerName: 'أحمد الروسان',
     phone: '0788123456',
     city: 'إربد',
@@ -111,7 +111,7 @@ const INITIAL_ORDERS: Order[] = [
   },
   {
     id: 'ord-103',
-    orderNumber: 'RZ-392011',
+    orderNumber: 'RZ-003',
     customerName: 'عمر القضاة',
     phone: '0777987654',
     city: 'الزرقاء',
@@ -321,7 +321,43 @@ export default function App() {
     return getSavedDbConfig().isConfigured;
   });
 
-  // Check live status on server mount & sync admin credentials, store settings, and products from MySQL
+  const playOrderChimeSound = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(783.99, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.35);
+    } catch (e) {}
+  };
+
+  // Real-time Order polling mechanism for live order notifications
+  useEffect(() => {
+    const orderInterval = setInterval(() => {
+      fetchOrdersFromDatabase(dbConfig).then((res) => {
+        if (res.success && Array.isArray(res.orders)) {
+          setOrders(prev => {
+            const prevIds = new Set(prev.map(o => o.id));
+            const newArrived = res.orders!.filter(o => !prevIds.has(o.id));
+            if (newArrived.length > 0) {
+              playOrderChimeSound();
+              showToast(`🔔 وصول ${newArrived.length} طلب جديد في النظام!`);
+            }
+            return res.orders!;
+          });
+        }
+      }).catch(() => {});
+    }, 5000);
+
+    return () => clearInterval(orderInterval);
+  }, [dbConfig.apiEndpoint, dbConfig.isConfigured]);
   useEffect(() => {
     checkServerDbStatus(dbConfig.apiEndpoint).then((status) => {
       if (status.isConnected) {
@@ -792,19 +828,22 @@ export default function App() {
   };
 
   const handleSaveNewOrder = (newOrder: Order) => {
-    setOrders(prev => [newOrder, ...prev]);
-    showToast(`تم تسجيل طلب جديد بنجاح برقم ${newOrder.orderNumber}`);
+    setOrders(prev => {
+      const updated = [newOrder, ...prev];
+      localStorage.setItem('rzoil_jordan_orders', JSON.stringify(updated));
+      return updated;
+    });
+    playOrderChimeSound();
+    showToast(`🔔 تم تسجيل طلب جديد بنجاح برقم ${newOrder.orderNumber}`);
 
-    // Automatically save directly to MySQL table rzoil_orders
-    if (dbConfig.isConfigured) {
-      saveOrderToDatabase(dbConfig, newOrder).then((res) => {
-        if (res.success) {
-          console.log('✅ تم تسجيل الطلب في قاعدة بيانات MySQL بنجاح:', res.message);
-        }
-      }).catch((err) => {
-        console.warn('تنبيه حفظ الطلب في قاعدة البيانات:', err);
-      });
-    }
+    // Automatically save directly to database backend
+    saveOrderToDatabase(dbConfig, newOrder).then((res) => {
+      if (res.success) {
+        console.log('✅ تم تسجيل الطلب في قاعدة البيانات بنجاح:', res.message);
+      }
+    }).catch((err) => {
+      console.warn('تنبيه حفظ الطلب في قاعدة البيانات:', err);
+    });
   };
 
   const handleAddDistributor = (dist: Distributor) => {
@@ -1010,6 +1049,7 @@ export default function App() {
         singleQuantity={directCheckoutProduct ? (cartQuantities[directCheckoutProduct.id] || 1) : 1}
         cartItems={cart}
         shippingCost={settings.shippingCost}
+        existingOrders={orders}
         onOrderSuccess={() => {
           if (!directCheckoutProduct) {
             setCart([]);
