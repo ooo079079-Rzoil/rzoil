@@ -225,14 +225,16 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return sanitizeProductCatalog(parsed);
+          const existingIds = new Set(parsed.map(p => p.id));
+          const missingOfficial = ALL_INITIAL_PRODUCTS.filter(p => !existingIds.has(p.id));
+          return sanitizeProductCatalog([...parsed, ...missingOfficial]);
         }
       } catch (e) { /* ignore */ }
     }
     return ALL_INITIAL_PRODUCTS;
   });
 
-  // Store Catalog Products
+  // Store Catalog Products - Starts empty until added by admin
   const [productsList, setProductsList] = useState<Product[]>(() => {
     const saved = localStorage.getItem('rzoil_jordan_products');
     if (saved !== null) {
@@ -243,7 +245,7 @@ export default function App() {
         }
       } catch (e) { /* ignore */ }
     }
-    return ALL_INITIAL_PRODUCTS;
+    return [];
   });
 
   const [currentProduct, setCurrentProduct] = useState<Product>(() => {
@@ -333,17 +335,12 @@ export default function App() {
       }
     }).catch(console.warn);
 
-    // Attempt to load products from MySQL or Server Database
+    // Attempt to load products from Server Database
     fetchProductsFromDatabase(dbConfig).then((res) => {
       if (res.success && Array.isArray(res.products)) {
-        if (res.initialized || res.products.length > 0) {
-          const sanitized = sanitizeProductCatalog(res.products);
-          setProductsList(sanitized);
-          localStorage.setItem('rzoil_jordan_products', JSON.stringify(sanitized));
-        } else {
-          // If server is clean/uninitialized, synchronize existing initial catalog to server
-          syncLocalDataToDatabase(dbConfig, productsList, distributors, orders, settings).catch(console.warn);
-        }
+        const sanitized = sanitizeProductCatalog(res.products);
+        setProductsList(sanitized);
+        localStorage.setItem('rzoil_jordan_products', JSON.stringify(sanitized));
       }
     }).catch(console.warn);
 
@@ -599,15 +596,15 @@ export default function App() {
     if (currentProduct.id === sanitized.id) {
       setCurrentProduct(sanitized);
     }
-    if (dbConfig.isConfigured) {
-      saveProductToDatabase(dbConfig, sanitized).then(res => {
-        if (res.success) {
-          showToast(`تم حفظ وتحديث ${sanitized.name} في قاعدة البيانات بنجاح ✅`);
-        }
-      }).catch(console.warn);
-    } else {
+    saveProductToDatabase(dbConfig, sanitized).then(res => {
+      if (res.success) {
+        showToast(`تم حفظ وتحديث ${sanitized.name} في قاعدة البيانات بنجاح ✅`);
+      } else {
+        showToast(`تم تحديث بيانات المنتج: ${sanitized.name}`);
+      }
+    }).catch(() => {
       showToast(`تم تحديث بيانات المنتج: ${sanitized.name}`);
-    }
+    });
   };
 
   const handleUpdateProductPrice = (productId: string, newPrice: number) => {
@@ -622,9 +619,7 @@ export default function App() {
     if (currentProduct.id === productId) {
       setCurrentProduct(prev => ({ ...prev, price: newPrice }));
     }
-    if (dbConfig.isConfigured) {
-      updateProductPriceInDatabase(dbConfig, productId, newPrice).catch(console.warn);
-    }
+    updateProductPriceInDatabase(dbConfig, productId, newPrice).catch(console.warn);
     showToast(`تم تحديث السعر إلى ${newPrice} د.أ`);
   };
 
@@ -638,23 +633,17 @@ export default function App() {
       }
       return p;
     }));
-    if (dbConfig.isConfigured) {
-      toggleProductStockInDatabase(dbConfig, productId, nextStock).catch(console.warn);
-    }
+    toggleProductStockInDatabase(dbConfig, productId, nextStock).catch(console.warn);
   };
 
   const handleAddProduct = (newProd: Product) => {
     const sanitized = sanitizeProductCatalog([newProd])[0] || newProd;
     setProductsList(prev => sanitizeProductCatalog([sanitized, ...prev]));
-    if (dbConfig.isConfigured) {
-      saveProductToDatabase(dbConfig, sanitized).then(res => {
-        if (res.success) {
-          showToast(`تم إضافة وحفظ ${sanitized.name} في قاعدة البيانات بنجاح ✅`);
-        }
-      }).catch(console.warn);
-    } else {
-      showToast(`تم إضافة منتج جديد: ${sanitized.name}`);
-    }
+    saveProductToDatabase(dbConfig, sanitized).then(res => {
+      if (res.success) {
+        showToast(`تم إضافة وحفظ ${sanitized.name} في قاعدة البيانات بنجاح ✅`);
+      }
+    }).catch(console.warn);
   };
 
   const handleDeleteProduct = (productId: string) => {
@@ -683,9 +672,7 @@ export default function App() {
   const handleClearAllOrders = () => {
     setOrders([]);
     localStorage.setItem('rzoil_jordan_orders', JSON.stringify([]));
-    if (dbConfig.isConfigured) {
-      clearRemoteOrders(dbConfig).catch(console.warn);
-    }
+    clearRemoteOrders(dbConfig).catch(console.warn);
     showToast('تم تصفير جميع الطلبات بنجاح');
   };
 
@@ -701,10 +688,11 @@ export default function App() {
       const filtered = prev.filter(p => p.id !== newProd.id && p.name !== newProd.name);
       return sanitizeProductCatalog([newProd, ...filtered]);
     });
-    if (dbConfig.isConfigured) {
-      saveProductToDatabase(dbConfig, newProd).catch(console.warn);
-    }
-    showToast(`تمت إضافة ${template.name} إلى المتجر وحفظه في قاعدة البيانات بنجاح ✅`);
+    saveProductToDatabase(dbConfig, newProd).then(res => {
+      if (res.success) {
+        showToast(`تمت إضافة ${template.name} إلى المتجر وحفظه في قاعدة البيانات بنجاح ✅`);
+      }
+    }).catch(console.warn);
   };
 
   const handleUpdateTemplate = (updatedTemplate: Product) => {
@@ -961,6 +949,8 @@ export default function App() {
             wishlistIds={wishlistIds}
             onOpenDistributors={() => setIsDistributorsOpen(true)}
             onOpenContact={() => setIsContactOpen(true)}
+            onOpenAdmin={handleRequestAdminAccess}
+            isAdminAuthenticated={isAdminAuthenticated}
           />
         ) : (
           <>

@@ -1,0 +1,83 @@
+{
+  "products": [],
+  "orders": [
+    {
+      "id": "ord-101",
+      "orderNumber": "RZ-849201",
+      "customerName": "طارق المجالي",
+      "phone": "0795551234",
+      "city": "عمان",
+      "address": "دير غبار - شارع عكرمة القرشي",
+      "notes": "يرجى الاتصال قبل الوصول بنصف ساعة",
+      "items": [
+        {
+          "product": {
+            "id": "rz-7556",
+            "code": "RZ400-10W-40-1L",
+            "name": "رزويل زيت RZ400 10W-40 1L",
+            "price": 6,
+            "brand": "RZ Oil Germany",
+            "category": "زيوت المحركات",
+            "image": "https://www.rzoil.net/us/164/pidwebp200/7563/f134267831454384393112-1.webp",
+            "inStock": true
+          },
+          "quantity": 2
+        }
+      ],
+      "totalAmount": 15,
+      "shippingCost": 3,
+      "createdAt": "2026-03-29T10:00:00.000Z",
+      "status": "pending"
+    }
+  ],
+  "distributors": [
+    {
+      "id": "1",
+      "city": "عمان",
+      "area": "خلدا، شارع مكة، وبيادر وادي السير",
+      "phone": "0791000001",
+      "address": "مركز خدمة وتوزيع رزويل المعتمد"
+    },
+    {
+      "id": "2",
+      "city": "إربد",
+      "area": "شارع الهاشمي والحي الشرقي",
+      "phone": "0791000002",
+      "address": "موزع معتمد - محطات خدمة وصيانة"
+    },
+    {
+      "id": "3",
+      "city": "الزرقاء",
+      "area": "الزرقاء الجديدة والمنطقة الحرفية",
+      "phone": "0791000003",
+      "address": "مركز قطع غيار وزيوت المحركات الألمانية"
+    },
+    {
+      "id": "4",
+      "city": "العقبة",
+      "area": "المنطقة التجارية والمنطقة الاقتصادية الخاصة",
+      "phone": "0791000004",
+      "address": "موزع إقليمي معتمد لجنوب المملكة"
+    }
+  ],
+  "settings": {
+    "storeName": "rzoil - rzoil.net",
+    "currency": "د.أ",
+    "shippingCost": 3,
+    "freeShippingThreshold": 50,
+    "supportPhone": "0791000001",
+    "whatsappPhone": "0791000001",
+    "workingHours": "السبت - الخميس: 9:00 ص - 9:00 م",
+    "facebookUrl": "https://facebook.com",
+    "twitterUrl": "https://twitter.com",
+    "instagramUrl": "",
+    "tiktokUrl": "",
+    "youtubeUrl": "",
+    "supportEmail": "info@rzoil.jo"
+  },
+  "admin": {
+    "username": "admin",
+    "password": "admin123"
+  },
+  "initialized": true
+}

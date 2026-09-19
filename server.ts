@@ -75,7 +75,7 @@ const DEFAULT_STORE = {
     username: 'admin',
     password: 'admin123'
   },
-  initialized: false
+  initialized: true
 };
 
 function readStore() {

@@ -30,6 +30,8 @@ interface HomeViewProps {
   wishlistIds: string[];
   onOpenDistributors: () => void;
   onOpenContact: () => void;
+  onOpenAdmin?: () => void;
+  isAdminAuthenticated?: boolean;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -43,7 +45,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   cartQuantities,
   wishlistIds,
   onOpenDistributors,
-  onOpenContact
+  onOpenContact,
+  onOpenAdmin,
+  isAdminAuthenticated
 }) => {
   const [localSearch, setLocalSearch] = useState('');
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc' | 'name'>('default');
@@ -239,7 +243,30 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
 
         {/* Products Grid */}
-        {filteredProducts.length === 0 ? (
+        {products.length === 0 ? (
+          <div className="py-20 px-4 text-center max-w-lg mx-auto space-y-4">
+            <div className="w-20 h-20 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-[#ea1b25] rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+              <Sparkles className="w-10 h-10 animate-pulse" />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 dark:text-white">
+              المتجر جاهز - بانتظار تفعيل الأصناف المعروضة
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              جميع أصناف وزيوت وإضافات رزويل الألمانية (81 صنفاً) محفوظة وجاهزة في <strong className="text-[#ea1b25]">كتالوج القوالب بلوحة الإدارة</strong>، ويمكن للمشرف إضافة أي صنف مباشرة إلى واجهة المتجر وقاعدة البيانات بضغطة زر.
+            </p>
+            {onOpenAdmin && (
+              <div className="pt-2">
+                <button
+                  onClick={onOpenAdmin}
+                  className="px-6 py-3 bg-[#ea1b25] hover:bg-[#c9141d] text-white rounded-xl text-sm font-black transition shadow-md hover:shadow-lg cursor-pointer inline-flex items-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>{isAdminAuthenticated ? 'فتح لوحة الإدارة وإضافة منتجات من الكتالوج' : 'تسجيل دخول المشرف لإضافة منتجات'}</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="py-16 text-center space-y-3">
             <div className="w-16 h-16 bg-gray-100 dark:bg-[#252525] text-gray-400 rounded-full flex items-center justify-center mx-auto">
               <Search className="w-8 h-8" />
