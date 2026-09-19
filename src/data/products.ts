@@ -1,5 +1,7 @@
 import { Product, CategoryItem } from '../types';
 
+export const RZ_OFFICIAL_FALLBACK_LOGO = '/rzoil-logo.png';
+
 export const CATEGORIES: CategoryItem[] = [
   { id: 'cat-all', name: 'الكل', brands: ['RZ Oil Germany'] },
   { id: 'cat-engine-oils', name: 'زيوت المحركات', brands: ['RZ Oil Germany'] },

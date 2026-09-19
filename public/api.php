@@ -313,7 +313,8 @@ $conn->query("CREATE TABLE IF NOT EXISTS `rzoil_products` (
     `code` VARCHAR(64),
     `name` VARCHAR(255) NOT NULL,
     `price` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    `original_price` DECIMAL(10,2),
+    `original_price` DECIMAL(10,2) DEFAULT NULL,
+    `origin_badge` VARCHAR(100) DEFAULT 'ألماني أصلي DE',
     `brand` VARCHAR(100) DEFAULT 'رزويل',
     `category` VARCHAR(100) DEFAULT 'اضافات الوقود',
     `image` MEDIUMTEXT,
@@ -324,6 +325,10 @@ $conn->query("CREATE TABLE IF NOT EXISTS `rzoil_products` (
     `usage_guide` TEXT,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+// Safe column migrations if columns don't exist yet
+@$conn->query("ALTER TABLE `rzoil_products` ADD COLUMN `original_price` DECIMAL(10,2) DEFAULT NULL");
+@$conn->query("ALTER TABLE `rzoil_products` ADD COLUMN `origin_badge` VARCHAR(100) DEFAULT 'ألماني أصلي DE'");
 
 $conn->query("CREATE TABLE IF NOT EXISTS `rzoil_orders` (
     `id` VARCHAR(64) PRIMARY KEY,
@@ -509,14 +514,16 @@ if ($action === 'get_products') {
         while ($row = $res->fetch_assoc()) {
             $products[] = [
                 'id' => $row['id'],
-                'code' => $row['code'],
+                'code' => $row['code'] ?: 'RZ-' . $row['id'],
                 'name' => $row['name'],
                 'price' => floatval($row['price']),
-                'brand' => $row['brand'],
-                'category' => $row['category'],
-                'image' => $row['image'],
-                'description' => $row['description'],
-                'volume' => $row['volume'],
+                'originalPrice' => isset($row['original_price']) && $row['original_price'] !== null ? floatval($row['original_price']) : null,
+                'originBadge' => !empty($row['origin_badge']) ? $row['origin_badge'] : 'ألماني أصلي DE',
+                'brand' => $row['brand'] ?: 'RZ Oil Germany',
+                'category' => $row['category'] ?: 'اضافات الوقود',
+                'image' => $row['image'] ?: '/rzoil-logo.png',
+                'description' => $row['description'] ?: '',
+                'volume' => $row['volume'] ?: '300 مل',
                 'inStock' => (bool)$row['in_stock'],
                 'features' => json_decode($row['features'], true) ?: ['صناعة ألمانية 100%'],
                 'usage' => $row['usage_guide'] ?: 'حسب إرشادات الشركة الصانعة',
@@ -534,23 +541,28 @@ if ($action === 'sync_all_data') {
     $products = $input['products'] ?? [];
     $distributors = $input['distributors'] ?? [];
     $orders = $input['orders'] ?? [];
+    $settings = $input['settings'] ?? [];
 
     if (!empty($products)) {
         foreach ($products as $p) {
             $stmt = $conn->prepare("INSERT INTO `rzoil_products` 
-                (`id`, `code`, `name`, `price`, `brand`, `category`, `image`, `description`, `volume`, `in_stock`, `features`, `usage_guide`)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (`id`, `code`, `name`, `price`, `original_price`, `origin_badge`, `brand`, `category`, `image`, `description`, `volume`, `in_stock`, `features`, `usage_guide`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
-                `code`=VALUES(`code`), `name`=VALUES(`name`), `price`=VALUES(`price`), `category`=VALUES(`category`), `in_stock`=VALUES(`in_stock`)");
+                `code`=VALUES(`code`), `name`=VALUES(`name`), `price`=VALUES(`price`), `original_price`=VALUES(`original_price`), `origin_badge`=VALUES(`origin_badge`), `category`=VALUES(`category`), `image`=VALUES(`image`), `in_stock`=VALUES(`in_stock`)");
             $inStock = !empty($p['inStock']) ? 1 : 0;
             $featJson = json_encode($p['features'] ?? [], JSON_UNESCAPED_UNICODE);
             $usage = $p['usage'] ?? '';
             $desc = $p['description'] ?? '';
-            $brand = $p['brand'] ?? 'رزويل';
+            $brand = $p['brand'] ?? 'RZ Oil Germany';
             $vol = $p['volume'] ?? '300 مل';
             $price = floatval($p['price'] ?? 10);
-            $stmt->bind_param("sssdsssssiss", 
-                $p['id'], $p['code'], $p['name'], $price, $brand, $p['category'], $p['image'], $desc, $vol, $inStock, $featJson, $usage
+            $origPrice = isset($p['originalPrice']) && floatval($p['originalPrice']) > 0 ? floatval($p['originalPrice']) : null;
+            $badge = !empty($p['originBadge']) ? $p['originBadge'] : 'ألماني أصلي DE';
+            $code = !empty($p['code']) ? $p['code'] : ('RZ-' . $p['id']);
+            $img = !empty($p['image']) ? $p['image'] : '/rzoil-logo.png';
+            $stmt->bind_param("sssdssssssisss", 
+                $p['id'], $code, $p['name'], $price, $origPrice, $badge, $brand, $p['category'], $img, $desc, $vol, $inStock, $featJson, $usage
             );
             $stmt->execute();
         }
@@ -566,7 +578,17 @@ if ($action === 'sync_all_data') {
         }
     }
 
-    sendJson(true, ['message' => 'تمت مزامنة وحفظ جميع المنتجات والموزعين في قاعدة بيانات InfinityFree بنجاح!']);
+    if (!empty($settings) && is_array($settings)) {
+        foreach ($settings as $key => $val) {
+            $keyStr = (string)$key;
+            $valStr = is_array($val) ? json_encode($val, JSON_UNESCAPED_UNICODE) : (string)$val;
+            $stmt = $conn->prepare("INSERT INTO `rzoil_settings` (`key_name`, `value_text`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value_text` = VALUES(`value_text`)");
+            $stmt->bind_param("ss", $keyStr, $valStr);
+            $stmt->execute();
+        }
+    }
+
+    sendJson(true, ['message' => 'تمت مزامنة وحفظ جميع المنتجات والموزعين والإعدادات في قاعدة بيانات InfinityFree بنجاح!']);
 }
 
 // -------------------------------------------------------------
@@ -662,23 +684,25 @@ if ($action === 'save_product') {
     }
 
     $stmt = $conn->prepare("INSERT INTO `rzoil_products` 
-        (`id`, `code`, `name`, `price`, `brand`, `category`, `image`, `description`, `volume`, `in_stock`, `features`, `usage_guide`)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (`id`, `code`, `name`, `price`, `original_price`, `origin_badge`, `brand`, `category`, `image`, `description`, `volume`, `in_stock`, `features`, `usage_guide`)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE 
-        `code`=VALUES(`code`), `name`=VALUES(`name`), `price`=VALUES(`price`), `brand`=VALUES(`brand`), `category`=VALUES(`category`), `image`=VALUES(`image`), `description`=VALUES(`description`), `volume`=VALUES(`volume`), `in_stock`=VALUES(`in_stock`), `features`=VALUES(`features`), `usage_guide`=VALUES(`usage_guide`)");
+        `code`=VALUES(`code`), `name`=VALUES(`name`), `price`=VALUES(`price`), `original_price`=VALUES(`original_price`), `origin_badge`=VALUES(`origin_badge`), `brand`=VALUES(`brand`), `category`=VALUES(`category`), `image`=VALUES(`image`), `description`=VALUES(`description`), `volume`=VALUES(`volume`), `in_stock`=VALUES(`in_stock`), `features`=VALUES(`features`), `usage_guide`=VALUES(`usage_guide`)");
     
     $inStock = !empty($p['inStock']) ? 1 : 0;
     $featJson = json_encode($p['features'] ?? [], JSON_UNESCAPED_UNICODE);
     $usage = $p['usage'] ?? '';
     $desc = $p['description'] ?? '';
-    $brand = $p['brand'] ?? 'رزويل';
+    $brand = $p['brand'] ?? 'RZ Oil Germany';
     $vol = $p['volume'] ?? '300 مل';
     $price = floatval($p['price'] ?? 10);
-    $code = $p['code'] ?? 'RZ-' . rand(1000, 9999);
-    $img = $p['image'] ?? '';
+    $origPrice = isset($p['originalPrice']) && floatval($p['originalPrice']) > 0 ? floatval($p['originalPrice']) : null;
+    $badge = !empty($p['originBadge']) ? $p['originBadge'] : 'ألماني أصلي DE';
+    $code = $p['code'] ?? ('RZ-' . rand(1000, 9999));
+    $img = $p['image'] ?? '/rzoil-logo.png';
 
-    $stmt->bind_param("sssdsssssiss", 
-        $p['id'], $code, $p['name'], $price, $brand, $p['category'], $img, $desc, $vol, $inStock, $featJson, $usage
+    $stmt->bind_param("sssdssssssisss", 
+        $p['id'], $code, $p['name'], $price, $origPrice, $badge, $brand, $p['category'], $img, $desc, $vol, $inStock, $featJson, $usage
     );
     $stmt->execute();
     sendJson(true, ['message' => 'تم حفظ المنتج في قاعدة البيانات بنجاح']);

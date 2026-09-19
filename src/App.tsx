@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Product, CartItem, Order, Distributor, StoreSettings, AdminCredentials, DatabaseConfig } from './types';
-import { ALL_INITIAL_PRODUCTS, MAIN_PRODUCT, RELATED_PRODUCTS, CATEGORIES } from './data/products';
+import { ALL_INITIAL_PRODUCTS, MAIN_PRODUCT, RELATED_PRODUCTS, CATEGORIES, RZ_OFFICIAL_FALLBACK_LOGO } from './data/products';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { HomeView } from './components/HomeView';
@@ -24,7 +24,12 @@ import {
   clearRemoteProducts, 
   clearRemoteOrders,
   saveAdminCredentialsToDatabase,
-  fetchAdminCredentialsFromDatabase
+  fetchAdminCredentialsFromDatabase,
+  saveProductToDatabase,
+  deleteProductFromDatabase,
+  saveStoreSettingsToDatabase,
+  fetchStoreSettingsFromDatabase,
+  fetchProductsFromDatabase
 } from './services/databaseService';
 import { Check, ShieldCheck, LogOut } from 'lucide-react';
 
@@ -127,7 +132,7 @@ const INITIAL_SETTINGS: StoreSettings = {
   workingHours: 'يومياً من 9:00 صباحاً حتى 9:00 مساءً (السبت - الخميس)'
 };
 
-// Helper to guarantee completely unique product IDs and deduplicated catalog
+// Helper to guarantee completely unique product IDs, proper images, and deduplicated catalog
 function sanitizeProductCatalog(products: Product[]): Product[] {
   const seenIds = new Set<string>();
   const seenNames = new Set<string>();
@@ -156,12 +161,47 @@ function sanitizeProductCatalog(products: Product[]): Product[] {
     seenIds.add(cleanId);
     seenNames.add(trimmedName + (p.volume || ''));
 
+    // Safe image checking: do not assign 20G or 21G to products that aren't 7611/7612
+    let safeImage = p.image ? p.image.trim() : RZ_OFFICIAL_FALLBACK_LOGO;
+    
+    // Strict non-oil and accessory protection: towels, cloths, buckets, detailing accessories
+    const isAccessoryOrCare = /منشفة|منشفه|مايكروفايبر|فوطة|فوطه|سطل|bucket|towel|microfiber|قماش|تنظيف زجاج|غسيل/i.test(trimmedName) || 
+      /منشفة|منشفه|مايكروفايبر|فوطة|فوطه|سطل/i.test(p.description || '');
+
+    if (isAccessoryOrCare) {
+      // If it has an oil can image (like 7611, 7612, 7635, 7746, 20g, 21g), reset to official RZ logo unless it's a custom uploaded data URI
+      if (
+        safeImage.includes('7612') || 
+        safeImage.includes('7611') || 
+        safeImage.includes('7635') || 
+        safeImage.includes('7746') || 
+        safeImage.includes('7556') || 
+        safeImage.includes('7558') || 
+        /20[gG]|21[gG]/.test(safeImage)
+      ) {
+        safeImage = RZ_OFFICIAL_FALLBACK_LOGO;
+      }
+    } else {
+      // Generic guard: only 7612 gets 7612 image, only 7611 gets 7611 image
+      if (safeImage.includes('7612') && cleanId !== 'rz-7612' && !trimmedName.includes('RZ21G')) {
+        safeImage = RZ_OFFICIAL_FALLBACK_LOGO;
+      }
+      if (safeImage.includes('7611') && cleanId !== 'rz-7611' && !trimmedName.includes('RZ11G') && !trimmedName.includes('RZ20G')) {
+        safeImage = RZ_OFFICIAL_FALLBACK_LOGO;
+      }
+    }
+
+    if (!safeImage || safeImage.length < 5) {
+      safeImage = RZ_OFFICIAL_FALLBACK_LOGO;
+    }
+
     result.push({
       ...p,
       id: cleanId,
       code: p.code ? String(p.code).trim() : `RZ-${cleanId}`,
-      image: p.image || 'https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp',
-      images: Array.isArray(p.images) && p.images.length > 0 ? p.images : [p.image || 'https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp'],
+      originBadge: p.originBadge !== undefined ? p.originBadge : 'ألماني أصلي DE',
+      image: safeImage,
+      images: Array.isArray(p.images) && p.images.length > 0 ? p.images : [safeImage],
     });
   }
 
@@ -169,6 +209,20 @@ function sanitizeProductCatalog(products: Product[]): Product[] {
 }
 
 export default function App() {
+  // Catalog Templates (initialized with 81 official products + custom saved templates)
+  const [catalogTemplates, setCatalogTemplates] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('rzoil_custom_templates');
+    if (saved !== null) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return sanitizeProductCatalog(parsed);
+        }
+      } catch (e) { /* ignore */ }
+    }
+    return ALL_INITIAL_PRODUCTS;
+  });
+
   // Store Catalog Products
   const [productsList, setProductsList] = useState<Product[]>(() => {
     const saved = localStorage.getItem('rzoil_jordan_products');
@@ -198,8 +252,8 @@ export default function App() {
                 ...match,
                 ...p,
                 id: match.id, // Normalize to standard unique id like rz-7556
-                image: match.image || p.image,
-                images: match.images || [match.image || p.image],
+                image: match.image || p.image || RZ_OFFICIAL_FALLBACK_LOGO,
+                images: match.images || [match.image || p.image || RZ_OFFICIAL_FALLBACK_LOGO],
                 description: match.description || p.description,
                 subtitle: match.subtitle || p.subtitle,
                 features: match.features?.length ? match.features : p.features,
@@ -295,13 +349,28 @@ export default function App() {
     return getSavedDbConfig().isConfigured;
   });
 
-  // Check live status on server mount & sync admin credentials from MySQL
+  // Check live status on server mount & sync admin credentials, store settings, and products from MySQL
   useEffect(() => {
     checkServerDbStatus(dbConfig.apiEndpoint).then((status) => {
       if (status.isConnected) {
         setIsDbConnected(true);
       }
     });
+
+    // Attempt to load store settings from MySQL if configured
+    fetchStoreSettingsFromDatabase(dbConfig).then((res) => {
+      if (res.success && res.settings && Object.keys(res.settings).length > 0) {
+        setSettings(prev => ({ ...prev, ...res.settings }));
+        localStorage.setItem('rzoil_jordan_settings', JSON.stringify({ ...settings, ...res.settings }));
+      }
+    }).catch(console.warn);
+
+    // Attempt to load products from MySQL if configured
+    fetchProductsFromDatabase(dbConfig).then((res) => {
+      if (res.success && Array.isArray(res.products) && res.products.length > 0) {
+        setProductsList(sanitizeProductCatalog(res.products));
+      }
+    }).catch(console.warn);
 
     // Attempt to load admin credentials from MySQL if configured
     fetchAdminCredentialsFromDatabase(dbConfig).then((res) => {
@@ -313,8 +382,8 @@ export default function App() {
         setAdminCredentials(syncedCreds);
         localStorage.setItem('rzoil_admin_auth', JSON.stringify(syncedCreds));
       }
-    });
-  }, [dbConfig.apiEndpoint]);
+    }).catch(console.warn);
+  }, [dbConfig.apiEndpoint, dbConfig.isConfigured]);
   
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -533,32 +602,76 @@ export default function App() {
   };
 
   // Admin handlers
+  const handleUpdateProduct = (updatedProd: Product) => {
+    const sanitized = sanitizeProductCatalog([updatedProd])[0] || updatedProd;
+    setProductsList(prev => prev.map(p => p.id === sanitized.id ? sanitized : p));
+    if (currentProduct.id === sanitized.id) {
+      setCurrentProduct(sanitized);
+    }
+    if (dbConfig.isConfigured) {
+      saveProductToDatabase(dbConfig, sanitized).then(res => {
+        if (res.success) {
+          showToast(`تم حفظ وتحديث ${sanitized.name} في قاعدة البيانات بنجاح ✅`);
+        }
+      }).catch(console.warn);
+    } else {
+      showToast(`تم تحديث بيانات المنتج: ${sanitized.name}`);
+    }
+  };
+
   const handleUpdateProductPrice = (productId: string, newPrice: number) => {
-    setProductsList(prev => prev.map(p => p.id === productId ? { ...p, price: newPrice } : p));
+    let updatedProd: Product | null = null;
+    setProductsList(prev => prev.map(p => {
+      if (p.id === productId) {
+        updatedProd = { ...p, price: newPrice };
+        return updatedProd;
+      }
+      return p;
+    }));
     if (currentProduct.id === productId) {
       setCurrentProduct(prev => ({ ...prev, price: newPrice }));
+    }
+    if (updatedProd && dbConfig.isConfigured) {
+      saveProductToDatabase(dbConfig, updatedProd).catch(console.warn);
     }
     showToast(`تم تحديث السعر إلى ${newPrice} د.أ`);
   };
 
   const handleToggleProductStock = (productId: string) => {
+    let updatedProd: Product | null = null;
     setProductsList(prev => prev.map(p => {
       if (p.id === productId) {
         const next = !p.inStock;
+        updatedProd = { ...p, inStock: next };
         showToast(next ? 'تم تعيين المنتج: متوفر' : 'تم تعيين المنتج: نفد من المخزون');
-        return { ...p, inStock: next };
+        return updatedProd;
       }
       return p;
     }));
+    if (updatedProd && dbConfig.isConfigured) {
+      saveProductToDatabase(dbConfig, updatedProd).catch(console.warn);
+    }
   };
 
   const handleAddProduct = (newProd: Product) => {
-    setProductsList(prev => sanitizeProductCatalog([newProd, ...prev]));
-    showToast(`تم إضافة منتج جديد: ${newProd.name}`);
+    const sanitized = sanitizeProductCatalog([newProd])[0] || newProd;
+    setProductsList(prev => sanitizeProductCatalog([sanitized, ...prev]));
+    if (dbConfig.isConfigured) {
+      saveProductToDatabase(dbConfig, sanitized).then(res => {
+        if (res.success) {
+          showToast(`تم إضافة وحفظ ${sanitized.name} في قاعدة البيانات بنجاح ✅`);
+        }
+      }).catch(console.warn);
+    } else {
+      showToast(`تم إضافة منتج جديد: ${sanitized.name}`);
+    }
   };
 
   const handleDeleteProduct = (productId: string) => {
     setProductsList(prev => prev.filter(p => p.id !== productId));
+    if (dbConfig.isConfigured) {
+      deleteProductFromDatabase(dbConfig, productId).catch(console.warn);
+    }
     showToast('تم حذف المنتج بنجاح');
   };
 
@@ -595,9 +708,60 @@ export default function App() {
     showToast(`تمت إضافة ${template.name} إلى المتجر بنجاح`);
   };
 
+  const handleUpdateTemplate = (updatedTemplate: Product) => {
+    // 1. Update in catalogTemplates state & localStorage
+    setCatalogTemplates(prev => {
+      const next = prev.map(t => (t.id === updatedTemplate.id || t.code === updatedTemplate.code) ? updatedTemplate : t);
+      localStorage.setItem('rzoil_custom_templates', JSON.stringify(next));
+      return next;
+    });
+
+    // 2. Also update live in productsList (store) if present
+    setProductsList(prev => {
+      let matched = false;
+      const next = prev.map(p => {
+        if (p.id === updatedTemplate.id || p.code === updatedTemplate.code || p.name === updatedTemplate.name) {
+          matched = true;
+          return {
+            ...p,
+            ...updatedTemplate,
+            price: p.price // preserve custom active store price
+          };
+        }
+        return p;
+      });
+      if (matched) {
+        localStorage.setItem('rzoil_jordan_products', JSON.stringify(next));
+      }
+      return next;
+    });
+
+    // 3. Update currentProduct if currently viewing it
+    if (currentProduct.id === updatedTemplate.id || currentProduct.code === updatedTemplate.code) {
+      setCurrentProduct(prev => ({ ...prev, ...updatedTemplate }));
+    }
+
+    showToast(`تم تحديث بيانات وصورة "${updatedTemplate.name}" بنجاح`);
+  };
+
+  const handleAddNewTemplate = (newTemplate: Product) => {
+    const sanitized: Product = {
+      ...newTemplate,
+      id: newTemplate.id || `rz-custom-${Date.now()}`,
+      image: newTemplate.image || RZ_OFFICIAL_FALLBACK_LOGO,
+      images: newTemplate.images?.length ? newTemplate.images : [newTemplate.image || RZ_OFFICIAL_FALLBACK_LOGO]
+    };
+    setCatalogTemplates(prev => {
+      const next = [sanitized, ...prev];
+      localStorage.setItem('rzoil_custom_templates', JSON.stringify(next));
+      return next;
+    });
+    showToast(`تمت إضافة صنف "${newTemplate.name}" إلى الكتالوج بنجاح`);
+  };
+
   const handleAddAllTemplatesToStore = () => {
     const existingIds = new Set(productsList.map(p => p.id));
-    const missing = ALL_INITIAL_PRODUCTS.filter(p => !existingIds.has(p.id));
+    const missing = catalogTemplates.filter(p => !existingIds.has(p.id));
     if (missing.length === 0) {
       showToast('جميع منتجات الكتالوج الرسمي متوفرة بالفعل في متجرك');
       return;
@@ -866,7 +1030,8 @@ export default function App() {
         adminCredentials={adminCredentials}
         onUpdateAdminCredentials={handleUpdateAdminCredentials}
         products={productsList}
-        templates={ALL_INITIAL_PRODUCTS}
+        templates={catalogTemplates}
+        onUpdateProduct={handleUpdateProduct}
         onUpdateProductPrice={handleUpdateProductPrice}
         onToggleProductStock={handleToggleProductStock}
         onAddProduct={handleAddProduct}
@@ -875,6 +1040,8 @@ export default function App() {
         onClearAllOrders={handleClearAllOrders}
         onAddTemplateToStore={handleAddTemplateToStore}
         onAddAllTemplatesToStore={handleAddAllTemplatesToStore}
+        onUpdateTemplate={handleUpdateTemplate}
+        onAddNewTemplate={handleAddNewTemplate}
         orders={orders}
         onUpdateOrderStatus={handleUpdateOrderStatus}
         onDeleteOrder={handleDeleteOrder}

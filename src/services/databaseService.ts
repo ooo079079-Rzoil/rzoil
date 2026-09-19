@@ -1,4 +1,4 @@
-import { DatabaseConfig, DatabaseStatus, Order, Product, Distributor } from '../types';
+import { DatabaseConfig, DatabaseStatus, Order, Product, Distributor, StoreSettings } from '../types';
 
 const STORAGE_KEY = 'rzoil_infinityfree_db_config';
 
@@ -203,20 +203,21 @@ export const saveOrderToDatabase = async (
 };
 
 /**
- * Bulk sync local products and distributors into the real MySQL database
+ * Bulk sync local products, distributors, orders, and settings into the real MySQL database
  */
 export const syncLocalDataToDatabase = async (
   config: DatabaseConfig,
   products: Product[],
   distributors: Distributor[],
-  orders: Order[]
+  orders: Order[],
+  settings?: StoreSettings
 ): Promise<{ success: boolean; message: string }> => {
   const endpoint = config.apiEndpoint || './api.php';
   try {
     const res = await fetch(`${endpoint}?action=sync_all_data`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ products, distributors, orders })
+      body: JSON.stringify({ products, distributors, orders, settings })
     });
     const data = await res.json();
     return {
@@ -367,4 +368,87 @@ export const deleteProductFromDatabase = async (
     return { success: false, message: e.message };
   }
 };
+
+/**
+ * Save store settings directly to MySQL database (rzoil_settings)
+ */
+export const saveStoreSettingsToDatabase = async (
+  config: DatabaseConfig,
+  settings: StoreSettings
+): Promise<{ success: boolean; message: string }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=save_settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings })
+    });
+    const data = await res.json();
+    return {
+      success: !!data.success,
+      message: data.message || (data.success ? 'تم حفظ الإعدادات في قاعدة البيانات' : 'فشل حفظ الإعدادات')
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      message: 'تعذر الاتصال بقاعدة البيانات لحفظ الإعدادات: ' + e.message
+    };
+  }
+};
+
+/**
+ * Fetch store settings from MySQL database (rzoil_settings)
+ */
+export const fetchStoreSettingsFromDatabase = async (
+  config: DatabaseConfig
+): Promise<{ settings?: Partial<StoreSettings>; success: boolean }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=get_settings`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) return { success: false };
+    const data = await res.json();
+    if (data.success && data.settings) {
+      const s = data.settings;
+      const parsed: Partial<StoreSettings> = {};
+      if (s.storeName) parsed.storeName = s.storeName;
+      if (s.currency) parsed.currency = s.currency;
+      if (s.country) parsed.country = s.country;
+      if (s.shippingCost !== undefined) parsed.shippingCost = parseFloat(s.shippingCost) || 0;
+      if (s.supportPhone) parsed.supportPhone = s.supportPhone;
+      if (s.whatsappPhone) parsed.whatsappPhone = s.whatsappPhone;
+      if (s.workingHours) parsed.workingHours = s.workingHours;
+      return { settings: parsed, success: true };
+    }
+    return { success: false };
+  } catch (e) {
+    return { success: false };
+  }
+};
+
+/**
+ * Fetch all products directly from MySQL database
+ */
+export const fetchProductsFromDatabase = async (
+  config: DatabaseConfig
+): Promise<{ products?: Product[]; success: boolean }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=get_products`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) return { success: false };
+    const data = await res.json();
+    if (data.success && Array.isArray(data.products)) {
+      return { products: data.products, success: true };
+    }
+    return { success: false };
+  } catch (e) {
+    return { success: false };
+  }
+};
+
 

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Product } from '../types';
+import { RZ_OFFICIAL_FALLBACK_LOGO } from '../data/products';
 import { 
   ShieldCheck, 
   Award, 
@@ -149,43 +150,43 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </section>
 
-      {/* Categories Horizontal Tabs */}
+      {/* Categories Tabs - Wrapped & Fully Visible */}
       <section className="sticky top-[64px] z-30 bg-white/95 dark:bg-[#181818]/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 shadow-xs">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-3">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs sm:text-sm">
+        <div className="max-w-[1280px] mx-auto px-3 sm:px-6 py-2.5">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
             <button
               onClick={() => onSelectCategory('الكل')}
-              className={`shrink-0 px-4 py-2 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 selectedCategory === 'الكل'
-                  ? 'bg-[#ea1b25] text-white shadow-md shadow-red-500/20'
-                  : 'bg-gray-100 dark:bg-[#252525] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  ? 'bg-[#ea1b25] text-white shadow-xs'
+                  : 'bg-gray-100 dark:bg-[#242424] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200/70 dark:border-gray-700/50'
               }`}
             >
               <span>جميع المنتجات</span>
-              <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
-                selectedCategory === 'الكل' ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none ${
+                selectedCategory === 'الكل' ? 'bg-white/25 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
               }`}>
                 {products.length}
               </span>
             </button>
 
-            {categories.map((cat) => {
+            {categories.filter(c => c !== 'الكل').map((cat) => {
               const count = categoryCounts[cat] || 0;
               const isActive = selectedCategory === cat;
               return (
                 <button
                   key={cat}
                   onClick={() => onSelectCategory(cat)}
-                  className={`shrink-0 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                     isActive
-                      ? 'bg-[#ea1b25] text-white shadow-md shadow-red-500/20'
-                      : 'bg-gray-100 dark:bg-[#252525] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      ? 'bg-[#ea1b25] text-white shadow-xs'
+                      : 'bg-gray-100 dark:bg-[#242424] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200/70 dark:border-gray-700/50'
                   }`}
                 >
                   <span>{cat}</span>
                   {count > 0 && (
-                    <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none ${
+                      isActive ? 'bg-white/25 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                     }`}>
                       {count}
                     </span>
@@ -270,11 +271,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   {/* Badges & Wishlist */}
                   <div className="absolute top-2.5 right-2.5 z-10 flex flex-col gap-1 items-start">
                     <span className="bg-[#ea1b25] text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs">
-                      ألماني أصلي 🇩🇪
+                      {product.originBadge || 'ألماني أصلي 🇩🇪'}
                     </span>
-                    {product.originalPrice && (
+                    {product.originalPrice && product.originalPrice > product.price && (
                       <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">
-                        خصم
+                        خصم {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
                       </span>
                     )}
                   </div>
@@ -305,7 +306,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       referrerPolicy="no-referrer"
                       className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-md"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = "https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp";
+                        (e.target as HTMLImageElement).src = RZ_OFFICIAL_FALLBACK_LOGO;
                       }}
                     />
                   </div>

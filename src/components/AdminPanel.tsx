@@ -39,6 +39,7 @@ import {
 import { Product, Order, Distributor, StoreSettings, AdminCredentials, DatabaseConfig } from '../types';
 import { RzTemplateLibrary } from './RzTemplateLibrary';
 import { InAppModal, InAppDialogProps } from './InAppModal';
+import { RZ_OFFICIAL_FALLBACK_LOGO } from '../data/products';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -50,8 +51,11 @@ interface AdminPanelProps {
   templates?: Product[];
   onAddTemplateToStore?: (template: Product, customPrice: number) => void;
   onAddAllTemplatesToStore?: () => void;
+  onUpdateTemplate?: (updatedTemplate: Product) => void;
+  onAddNewTemplate?: (newTemplate: Product) => void;
   onClearAllProducts?: () => void;
   onClearAllOrders?: () => void;
+  onUpdateProduct?: (product: Product) => void;
   onUpdateProductPrice: (productId: string, newPrice: number) => void;
   onToggleProductStock: (productId: string) => void;
   onAddProduct: (product: Product) => void;
@@ -80,8 +84,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   templates = [],
   onAddTemplateToStore,
   onAddAllTemplatesToStore,
+  onUpdateTemplate,
+  onAddNewTemplate,
   onClearAllProducts,
   onClearAllOrders,
+  onUpdateProduct,
   onUpdateProductPrice,
   onToggleProductStock,
   onAddProduct,
@@ -148,11 +155,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Full Product Edit Modal state
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editUploadedImageFile, setEditUploadedImageFile] = useState<string | null>(null);
+  const [editUploadedFileName, setEditUploadedFileName] = useState<string>('');
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+
   // New product state
   const [newProduct, setNewProduct] = useState<Partial<Product>>({
     name: '',
     code: '',
     price: 10,
+    originalPrice: undefined,
+    originBadge: 'ألماني أصلي DE',
     brand: 'رزويل',
     category: 'اضافات الوقود',
     image: '',
@@ -247,6 +262,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       name: template.name,
       code: template.code,
       price: template.price || 10,
+      originalPrice: template.originalPrice,
+      originBadge: template.originBadge || 'ألماني أصلي DE',
       brand: template.brand || 'رزويل',
       category: template.category || 'اضافات الوقود',
       image: template.image,
@@ -275,9 +292,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       name: newProduct.name,
       code: newProduct.code || 'RZ-' + Math.floor(1000 + Math.random() * 9000),
       price: Number(newProduct.price),
+      originalPrice: newProduct.originalPrice && Number(newProduct.originalPrice) > 0 ? Number(newProduct.originalPrice) : undefined,
+      originBadge: newProduct.originBadge?.trim() || 'ألماني أصلي DE',
       brand: newProduct.brand || 'رزويل',
       category: newProduct.category || 'اضافات الوقود',
-      image: uploadedImageFile || newProduct.image || 'https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp',
+      image: uploadedImageFile || newProduct.image || RZ_OFFICIAL_FALLBACK_LOGO,
+      images: [uploadedImageFile || newProduct.image || RZ_OFFICIAL_FALLBACK_LOGO],
       description: newProduct.description || 'منتج ألماني فائق الجودة من شركة RZ Oil الألمانية.',
       features: ['صناعة ألمانية 100%', 'معتمد ومطابق للمواصفات', 'حماية فائقة للمحرك'],
       usage: 'يضاف لخزان الوقود أو المحرك حسب إرشادات الشركة المصنعة',
@@ -294,6 +314,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       name: '',
       code: '',
       price: 10,
+      originalPrice: undefined,
+      originBadge: 'ألماني أصلي DE',
       brand: 'رزويل',
       category: 'اضافات الوقود',
       image: '',
@@ -301,6 +323,51 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       volume: '300 مل',
       inStock: true
     });
+  };
+
+  const handleOpenEditProduct = (p: Product) => {
+    setEditingProduct({ ...p });
+    setEditUploadedImageFile(p.image);
+    setEditUploadedFileName('');
+  };
+
+  const handleEditImageFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      showInAppAlert('ملف غير صالح', 'يرجى اختيار ملف صورة صالح (PNG, JPG, WebP)', 'warning');
+      return;
+    }
+    setEditUploadedFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      setEditUploadedImageFile(base64);
+      setEditingProduct(prev => prev ? { ...prev, image: base64 } : null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveEditProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct || !editingProduct.name || !editingProduct.price) {
+      showInAppAlert('بيانات ناقصة', 'يرجى إدخال اسم وسعر المنتج', 'warning');
+      return;
+    }
+
+    const updated: Product = {
+      ...editingProduct,
+      price: Number(editingProduct.price),
+      originalPrice: editingProduct.originalPrice && Number(editingProduct.originalPrice) > 0 ? Number(editingProduct.originalPrice) : undefined,
+      originBadge: editingProduct.originBadge?.trim() || 'ألماني أصلي DE',
+      image: editUploadedImageFile || editingProduct.image || RZ_OFFICIAL_FALLBACK_LOGO,
+      images: [editUploadedImageFile || editingProduct.image || RZ_OFFICIAL_FALLBACK_LOGO]
+    };
+
+    if (onUpdateProduct) {
+      onUpdateProduct(updated);
+    }
+    setEditingProduct(null);
+    setEditUploadedImageFile(null);
+    setEditUploadedFileName('');
   };
 
   const handleSavePrice = (productId: string) => {
@@ -906,7 +973,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
 
               {/* Category Filter Pills for Admin */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 {['all', 'اضافات الوقود', 'اضافات الزيت', 'زيوت المحركات', 'زيوت ناقل الحركه', 'صيانه و اصلاح', 'مياه الردياتير و الاضافات', 'العنايه بالسياره', 'الدراجات الناريه', 'معدات'].map((cat) => (
                   <button
                     key={cat}
@@ -964,7 +1031,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
                       <label className="block font-bold mb-1">اسم المنتج *</label>
                       <input
@@ -978,7 +1045,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
 
                     <div>
-                      <label className="block font-bold mb-1">السعر بالدينار الأردني (د.أ) *</label>
+                      <label className="block font-bold mb-1 text-[#ea1b25]">سعر البيع الحالي (د.أ) *</label>
                       <input
                         type="number"
                         step="0.5"
@@ -986,7 +1053,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         placeholder="مثال: 12.5"
                         value={newProduct.price}
                         onChange={(e) => setNewProduct({ ...newProduct, price: parseFloat(e.target.value) })}
-                        className="w-full h-8 px-2 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-bold text-[#ea1b25]"
+                        className="w-full h-8 px-2 rounded border border-red-300 dark:border-red-700 bg-gray-50 dark:bg-[#181818] font-bold text-[#ea1b25]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold mb-1 text-gray-500">السعر قبل الخصم (اختياري)</label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        placeholder="مثال: 15.0"
+                        value={newProduct.originalPrice || ''}
+                        onChange={(e) => setNewProduct({ ...newProduct, originalPrice: e.target.value ? parseFloat(e.target.value) : undefined })}
+                        className="w-full h-8 px-2 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold mb-1">شارة المنشأ والجودة</label>
+                      <input
+                        type="text"
+                        placeholder="مثال: ألماني أصلي DE"
+                        value={newProduct.originBadge || 'ألماني أصلي DE'}
+                        onChange={(e) => setNewProduct({ ...newProduct, originBadge: e.target.value })}
+                        className="w-full h-8 px-2 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-bold"
                       />
                     </div>
 
@@ -1035,9 +1125,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       <label className="block font-bold mb-1">العلامة التجارية</label>
                       <input
                         type="text"
-                        value="رزويل - RZ Oil Germany"
-                        disabled
-                        className="w-full h-8 px-2 rounded border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-[#111] text-gray-500 font-bold"
+                        value={newProduct.brand || 'رزويل - RZ Oil Germany'}
+                        onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })}
+                        className="w-full h-8 px-2 rounded border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-[#111] text-gray-700 dark:text-gray-300 font-bold"
                       />
                     </div>
                   </div>
@@ -1214,10 +1304,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       <tr>
                         <th className="p-3">المنتج والصورة</th>
                         <th className="p-3">كود الصنف</th>
+                        <th className="p-3">المنشأ / الشارة</th>
                         <th className="p-3">القسم</th>
-                        <th className="p-3">السعر الحالي (د.أ)</th>
+                        <th className="p-3">السعر والخصم (د.أ)</th>
                         <th className="p-3">حالة التوفر</th>
-                        <th className="p-3 text-center">الإجراءات</th>
+                        <th className="p-3 text-center">الإجراءات والتعديل</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -1231,7 +1322,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 referrerPolicy="no-referrer"
                                 className="w-10 h-10 object-contain p-1 rounded bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-700 shrink-0"
                                 onError={(e) => {
-                                  (e.target as HTMLImageElement).src = "https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp";
+                                  (e.target as HTMLImageElement).src = RZ_OFFICIAL_FALLBACK_LOGO;
                                 }}
                               />
                               <div>
@@ -1241,6 +1332,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             </div>
                           </td>
                           <td className="p-3 font-mono font-bold text-gray-700 dark:text-gray-300">{p.code}</td>
+                          <td className="p-3">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                              {p.originBadge || 'ألماني أصلي DE'}
+                            </span>
+                          </td>
                           <td className="p-3 text-gray-500">{p.category}</td>
                           <td className="p-3 font-tajawal">
                             {editingPriceId === p.id ? (
@@ -1269,18 +1365,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 </button>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-black text-sm text-[#ea1b25]">{p.price} د.أ</span>
-                                <button
-                                  onClick={() => {
-                                    setEditingPriceId(p.id);
-                                    setTempPrice(p.price);
-                                  }}
-                                  className="p-1 text-gray-400 hover:text-[#ea1b25] transition cursor-pointer"
-                                  title="تعديل السعر"
-                                >
-                                  <Edit3 className="w-3 h-3" />
-                                </button>
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-black text-sm text-[#ea1b25]">{p.price} د.أ</span>
+                                  <button
+                                    onClick={() => {
+                                      setEditingPriceId(p.id);
+                                      setTempPrice(p.price);
+                                    }}
+                                    className="p-1 text-gray-400 hover:text-[#ea1b25] transition cursor-pointer"
+                                    title="تعديل السعر السريع"
+                                  >
+                                    <Edit3 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                {p.originalPrice && p.originalPrice > p.price && (
+                                  <div className="flex items-center gap-1 text-[10px]">
+                                    <span className="text-gray-400 line-through font-mono">{p.originalPrice} د.أ</span>
+                                    <span className="bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400 font-bold px-1 rounded">
+                                      خصم {Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)}%
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </td>
@@ -1297,20 +1403,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             </button>
                           </td>
                           <td className="p-3 text-center">
-                            <button
-                              onClick={() => {
-                                showInAppConfirm(
-                                  'حذف المنتج',
-                                  `هل أنت متأكد من حذف المنتج "${p.name}"؟`,
-                                  () => onDeleteProduct(p.id),
-                                  true
-                                );
-                              }}
-                              className="p-1.5 text-gray-400 hover:text-red-600 transition cursor-pointer"
-                              title="حذف المنتج"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => handleOpenEditProduct(p)}
+                                className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                title="تعديل كافة بيانات وصورة المنتج"
+                              >
+                                <Edit3 className="w-3.5 h-3.5 text-[#ea1b25]" />
+                                <span>تعديل شامل</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  showInAppConfirm(
+                                    'حذف المنتج',
+                                    `هل أنت متأكد من حذف المنتج "${p.name}"؟`,
+                                    () => onDeleteProduct(p.id),
+                                    true
+                                  );
+                                }}
+                                className="p-1.5 text-gray-400 hover:text-red-600 transition cursor-pointer"
+                                title="حذف المنتج"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1318,6 +1434,252 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </table>
                 </div>
               </div>
+              )}
+
+              {/* Full Product Edit Modal */}
+              {editingProduct && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+                  <div className="bg-white dark:bg-[#202020] rounded-2xl border border-gray-200 dark:border-gray-800 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl p-5 space-y-4 animate-scale-up text-xs">
+                    <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-950/40 text-[#ea1b25] flex items-center justify-center font-bold">
+                          <Edit3 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-sm text-gray-900 dark:text-white">تعديل بيانات المنتج والصورة والخصم</h4>
+                          <p className="text-[11px] text-gray-400">تحديث تفاصيل المنتج وحفظها مباشرة بقاعدة البيانات</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setEditingProduct(null);
+                          setEditUploadedImageFile(null);
+                          setEditUploadedFileName('');
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveEditProduct} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="sm:col-span-2">
+                          <label className="block font-bold mb-1">اسم المنتج *</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingProduct.name}
+                            onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                            className="w-full h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-bold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold mb-1 text-[#ea1b25]">سعر البيع الحالي (د.أ) *</label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            required
+                            value={editingProduct.price}
+                            onChange={(e) => setEditingProduct({ ...editingProduct, price: parseFloat(e.target.value) || 0 })}
+                            className="w-full h-9 px-3 rounded-lg border border-red-300 dark:border-red-700 bg-gray-50 dark:bg-[#181818] font-bold text-[#ea1b25]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold mb-1 text-gray-500">
+                            السعر الأصلي قبل الخصم (اختياري)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="0.5"
+                              placeholder="مثال: 15 (اتركه فارغاً إذا لا يوجد خصم)"
+                              value={editingProduct.originalPrice || ''}
+                              onChange={(e) => setEditingProduct({ ...editingProduct, originalPrice: e.target.value ? parseFloat(e.target.value) : undefined })}
+                              className="w-full h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-mono"
+                            />
+                            {editingProduct.originalPrice && editingProduct.originalPrice > editingProduct.price && (
+                              <span className="absolute left-2 top-2 bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                خصم {Math.round(((editingProduct.originalPrice - editingProduct.price) / editingProduct.originalPrice) * 100)}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block font-bold mb-1">شارة المنشأ والجودة (قابلة للتعديل)</label>
+                          <input
+                            type="text"
+                            placeholder="مثال: ألماني أصلي DE"
+                            value={editingProduct.originBadge || 'ألماني أصلي DE'}
+                            onChange={(e) => setEditingProduct({ ...editingProduct, originBadge: e.target.value })}
+                            className="w-full h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-bold"
+                          />
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="text-[10px] text-gray-400">خيارات سريعة:</span>
+                            {['ألماني أصلي DE', 'Made in Germany 🇩🇪', 'عرض حصري 🔥', 'الأكثر طلباً ⭐'].map(opt => (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => setEditingProduct({ ...editingProduct, originBadge: opt })}
+                                className="text-[10px] bg-gray-100 dark:bg-[#2a2a2a] hover:bg-gray-200 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300"
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block font-bold mb-1">كود الصنف (Code / Part No)</label>
+                          <input
+                            type="text"
+                            value={editingProduct.code}
+                            onChange={(e) => setEditingProduct({ ...editingProduct, code: e.target.value })}
+                            className="w-full h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold mb-1">القسم</label>
+                          <select
+                            value={editingProduct.category}
+                            onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                            className="w-full h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818]"
+                          >
+                            <option value="اضافات الوقود">اضافات الوقود</option>
+                            <option value="اضافات الزيت">اضافات الزيت</option>
+                            <option value="زيوت المحركات">زيوت المحركات</option>
+                            <option value="زيوت ناقل الحركه">زيوت ناقل الحركه</option>
+                            <option value="صيانه و اصلاح">صيانه و اصلاح</option>
+                            <option value="مياه الردياتير و الاضافات">مياه الردياتير و الاضافات</option>
+                            <option value="العنايه بالسياره">العنايه بالسياره</option>
+                            <option value="الدراجات الناريه">الدراجات الناريه</option>
+                            <option value="معدات">معدات</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block font-bold mb-1">الحجم / السعة</label>
+                          <input
+                            type="text"
+                            value={editingProduct.volume || ''}
+                            onChange={(e) => setEditingProduct({ ...editingProduct, volume: e.target.value })}
+                            className="w-full h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold mb-1">حالة التوفر بالمخزون</label>
+                          <select
+                            value={editingProduct.inStock ? 'true' : 'false'}
+                            onChange={(e) => setEditingProduct({ ...editingProduct, inStock: e.target.value === 'true' })}
+                            className="w-full h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-bold"
+                          >
+                            <option value="true">متوفر في المستودع (In Stock)</option>
+                            <option value="false">نفد من المخزون (Out of Stock)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Image Upload Zone in Edit Modal */}
+                      <div className="space-y-2 p-3 bg-gray-50 dark:bg-[#181818] rounded-xl border border-gray-200 dark:border-gray-700">
+                        <label className="block font-bold text-gray-800 dark:text-gray-200">
+                          صورة المنتج (تغيير أو رفع من الجهاز)
+                        </label>
+                        
+                        <input
+                          ref={editFileInputRef}
+                          type="file"
+                          accept="image/png, image/jpeg, image/jpg, image/webp"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleEditImageFile(e.target.files[0]);
+                            }
+                          }}
+                        />
+
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={editUploadedImageFile || editingProduct.image || RZ_OFFICIAL_FALLBACK_LOGO}
+                            alt="معاينة صورة المنتج"
+                            className="w-16 h-16 object-contain rounded-lg bg-white dark:bg-[#111] p-1 border border-gray-200 dark:border-gray-700 shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = RZ_OFFICIAL_FALLBACK_LOGO;
+                            }}
+                          />
+                          <div className="flex-1 space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => editFileInputRef.current?.click()}
+                                className="px-3 py-1.5 bg-[#ea1b25] hover:bg-[#c9141d] text-white rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                              >
+                                <Upload className="w-3.5 h-3.5" />
+                                <span>رفع صورة جديدة من الكمبيوتر</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditUploadedImageFile(RZ_OFFICIAL_FALLBACK_LOGO);
+                                  setEditingProduct({ ...editingProduct, image: RZ_OFFICIAL_FALLBACK_LOGO });
+                                }}
+                                className="px-2.5 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-bold transition cursor-pointer"
+                              >
+                                استخدام لوجو رزويل
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="أو ضع رابط صورة مباشر (URL)..."
+                              value={editingProduct.image || ''}
+                              onChange={(e) => {
+                                setEditingProduct({ ...editingProduct, image: e.target.value });
+                                setEditUploadedImageFile(e.target.value);
+                              }}
+                              className="w-full h-8 px-2 text-xs rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#111] font-mono"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold mb-1">وصف المنتج ومميزاته</label>
+                        <textarea
+                          rows={3}
+                          value={editingProduct.description || ''}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                          className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818]"
+                          placeholder="وصف تفصيلي ومميزات المنتج..."
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingProduct(null);
+                            setEditUploadedImageFile(null);
+                            setEditUploadedFileName('');
+                          }}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg transition cursor-pointer"
+                        >
+                          إلغاء
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-5 py-2 bg-[#ea1b25] hover:bg-[#c9141d] text-white font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer shadow-md"
+                        >
+                          <Save className="w-4 h-4" />
+                          <span>حفظ التعديلات في قاعدة البيانات</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -1329,6 +1691,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 templates={templates}
                 currentStoreProducts={products}
                 onAddAllTemplatesToStore={onAddAllTemplatesToStore}
+                onUpdateTemplate={onUpdateTemplate}
+                onAddNewTemplate={onAddNewTemplate}
                 onAddTemplateToStore={(template, customPrice) => {
                   if (onAddTemplateToStore) {
                     onAddTemplateToStore(template, customPrice);

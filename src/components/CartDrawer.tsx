@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Trash2, ShoppingBag, ArrowRight, Truck } from 'lucide-react';
 import { CartItem } from '../types';
+import { RZ_OFFICIAL_FALLBACK_LOGO } from '../data/products';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -78,7 +79,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     referrerPolicy="no-referrer"
                     className="w-16 h-16 object-contain bg-white dark:bg-[#1a1a1a] p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp";
+                      (e.target as HTMLImageElement).src = RZ_OFFICIAL_FALLBACK_LOGO;
                     }}
                   />
                   

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
+import { RZ_OFFICIAL_FALLBACK_LOGO } from '../data/products';
 import { 
   Heart, 
   ShoppingCart, 
@@ -122,14 +123,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
         <div className="md:col-span-5 lg:col-span-4 flex flex-col items-center">
           <div className="relative w-full max-w-[400px] aspect-square rounded-2xl bg-white dark:bg-[#202020] border-2 border-gray-100 dark:border-gray-800 p-4 shadow-sm flex items-center justify-center overflow-hidden group">
             
-            {/* German Flag / Certification Pill */}
+            {/* German Flag / Origin Badge Pill */}
             <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 bg-gray-900/90 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm">
               <span className="flex items-center h-2.5 w-3.5 rounded overflow-hidden shadow-xs border border-white/20">
                 <span className="bg-black w-1/3 h-full"></span>
                 <span className="bg-red-600 w-1/3 h-full"></span>
                 <span className="bg-yellow-400 w-1/3 h-full"></span>
               </span>
-              <span>Made in Germany</span>
+              <span>{product.originBadge || 'ألماني أصلي Made in Germany'}</span>
             </div>
 
             {/* TÜV Rheinland / Cert Badge */}
@@ -143,13 +144,16 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
             {/* Main Product Image */}
             <img
               id="prdcimage"
-              src={product.image}
+              src={product.image || RZ_OFFICIAL_FALLBACK_LOGO}
               alt={product.name}
               referrerPolicy="no-referrer"
               className={`max-w-full max-h-full object-contain transition-transform duration-300 ${
                 isZoomed ? 'scale-125' : 'group-hover:scale-105'
               }`}
               loading="eager"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = RZ_OFFICIAL_FALLBACK_LOGO;
+              }}
             />
 
             {/* Zoom Trigger Button */}
@@ -223,12 +227,24 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
             
             {/* Price section */}
             <div>
-              <span className="text-xs text-gray-500 dark:text-gray-400 block mb-0.5">السعر الرسمي:</span>
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-xs text-gray-500 dark:text-gray-400">السعر الحالي:</span>
+                {product.originalPrice && product.originalPrice > product.price && (
+                  <span className="bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">
+                    خصم {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+                  </span>
+                )}
+              </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white font-tajawal">
                   {product.price.toLocaleString()}
                 </span>
                 <span className="text-xl font-bold text-[#ea1b25]">دينار أردني</span>
+                {product.originalPrice && product.originalPrice > product.price && (
+                  <span className="text-base text-gray-400 line-through font-mono">
+                    {product.originalPrice} د.أ
+                  </span>
+                )}
               </div>
               <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
                 شامل ضريبة القيمة المضافة

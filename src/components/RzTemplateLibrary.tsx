@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Product } from '../types';
-import { ALL_INITIAL_PRODUCTS } from '../data/products';
+import { ALL_INITIAL_PRODUCTS, RZ_OFFICIAL_FALLBACK_LOGO } from '../data/products';
 import { 
   Search, 
   Plus, 
@@ -17,7 +17,13 @@ import {
   ExternalLink,
   Trash2,
   Layers,
-  RotateCcw
+  RotateCcw,
+  Edit3,
+  Image as ImageIcon,
+  Upload,
+  X,
+  Save,
+  CheckCheck
 } from 'lucide-react';
 
 interface RzTemplateLibraryProps {
@@ -27,6 +33,8 @@ interface RzTemplateLibraryProps {
   onRemoveFromStore: (productId: string) => void;
   onFillFormWithTemplate?: (template: Product) => void;
   onAddAllTemplatesToStore?: () => void;
+  onUpdateTemplate?: (updatedTemplate: Product) => void;
+  onAddNewTemplate?: (newTemplate: Product) => void;
 }
 
 export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
@@ -35,7 +43,9 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
   onAddTemplateToStore,
   onRemoveFromStore,
   onFillFormWithTemplate,
-  onAddAllTemplatesToStore
+  onAddAllTemplatesToStore,
+  onUpdateTemplate,
+  onAddNewTemplate
 }) => {
   // Safe fallback to full official catalog
   const safeTemplates = (templates && templates.length > 0) ? templates : ALL_INITIAL_PRODUCTS;
@@ -44,6 +54,12 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [expandedDescId, setExpandedDescId] = useState<string | null>(null);
   
+  // State for Editing/Adding Template Modal
+  const [editingTemplate, setEditingTemplate] = useState<Product | null>(null);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [imagePreviewError, setImagePreviewError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Custom price map for each template { [templateId]: number }
   const [prices, setPrices] = useState<{ [key: string]: number }>(() => {
     const initial: { [key: string]: number } = {};
@@ -102,6 +118,90 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
     }
   };
 
+  // Open Edit Modal for an existing template
+  const handleOpenEdit = (template: Product) => {
+    setEditingTemplate({
+      ...template,
+      features: template.features || [],
+      directions: template.directions || []
+    });
+    setIsCreatingNew(false);
+    setImagePreviewError(false);
+  };
+
+  // Open Add Modal for creating a new template
+  const handleOpenCreate = () => {
+    const newId = `rz-custom-${Date.now()}`;
+    setEditingTemplate({
+      id: newId,
+      code: `RZ-${Date.now().toString().slice(-4)}`,
+      name: '',
+      brand: 'RZ Oil Germany',
+      category: 'زيوت المحركات',
+      price: 10,
+      originalPrice: 12,
+      image: RZ_OFFICIAL_FALLBACK_LOGO,
+      images: [RZ_OFFICIAL_FALLBACK_LOGO],
+      volume: '1L',
+      subtitle: 'منتج ألماني أصلي معتمد',
+      description: '',
+      features: ['جودة ألمانية فائقة ومطابقة لأعلى معايير الأداء'],
+      usage: 'يستخدم وفقاً لتعليمات وتوصيات الشركة المصنعة.',
+      directions: ['يرجى قراءة تعليمات العبوة جيداً قبل الاستخدام.'],
+      inStock: true
+    });
+    setIsCreatingNew(true);
+    setImagePreviewError(false);
+  };
+
+  // Handle local file upload
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && editingTemplate) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setEditingTemplate(prev => prev ? {
+          ...prev,
+          image: base64,
+          images: [base64, ...(prev.images || []).filter(img => img !== base64)]
+        } : null);
+        setImagePreviewError(false);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Save template edits
+  const handleSaveTemplate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTemplate || !editingTemplate.name.trim()) return;
+
+    const finalizedTemplate: Product = {
+      ...editingTemplate,
+      name: editingTemplate.name.trim(),
+      code: editingTemplate.code.trim() || `RZ-${editingTemplate.id}`,
+      image: editingTemplate.image.trim() || RZ_OFFICIAL_FALLBACK_LOGO,
+      images: editingTemplate.images && editingTemplate.images.length > 0 
+        ? editingTemplate.images 
+        : [editingTemplate.image.trim() || RZ_OFFICIAL_FALLBACK_LOGO]
+    };
+
+    if (isCreatingNew) {
+      if (onAddNewTemplate) {
+        onAddNewTemplate(finalizedTemplate);
+      } else if (onUpdateTemplate) {
+        onUpdateTemplate(finalizedTemplate);
+      }
+    } else {
+      if (onUpdateTemplate) {
+        onUpdateTemplate(finalizedTemplate);
+      }
+    }
+
+    setEditingTemplate(null);
+  };
+
   return (
     <div className="space-y-4">
       {/* Top Banner Guide */}
@@ -118,12 +218,22 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
               </span>
             </h3>
             <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
-              جميع المنتجات الألمانية بالصور والأكواد والأسعار الرسمية متوفرة. يمكنك إضافة أي منتج للمتجر فردياً أو إضافة الكتالوج كاملاً بضغطة زر!
+              جميع المنتجات بالصور الألمانية الرسمية والشروحات الدقيقة. يمكنك تعديل أي منتج أو تحديث صورته ومواصفاته مباشرة، أو إضافة منتجات جديدة للكتالوج.
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0 self-start md:self-center">
+          <button
+            onClick={handleOpenCreate}
+            type="button"
+            className="px-3 py-2 bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap"
+            title="إضافة منتج أو قالب جديد لكتالوج رزويل"
+          >
+            <Plus className="w-4 h-4" />
+            <span>إضافة قالب جديد</span>
+          </button>
+
           <button
             onClick={handleAddAll}
             type="button"
@@ -131,7 +241,7 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
             title="إضافة كافة منتجات الكتالوج للمتجر"
           >
             <Layers className="w-4 h-4" />
-            <span>إضافة كامل الكتالوج ({safeTemplates.length} صنف)</span>
+            <span>إضافة كامل الكتالوج للمتجر</span>
           </button>
 
           <div className="px-3 py-1.5 bg-white dark:bg-[#1a1a1a] rounded-xl border border-gray-200 dark:border-gray-800 text-xs text-gray-700 dark:text-gray-300">
@@ -145,7 +255,7 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
         <div className="relative flex-1">
           <input
             type="text"
-            placeholder="ابحث في الكتالوج بالاسم، كود المنتج (مثل 1050057)، أو الحجم..."
+            placeholder="ابحث في الكتالوج بالاسم، الكود (مثل RZ400)، اللزوجة، أو الحجم..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-9 pr-9 pl-3 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#1a1a1a] text-gray-900 dark:text-white focus:outline-none focus:border-[#ea1b25]"
@@ -160,7 +270,7 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
       </div>
 
       {/* Category Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
         <button
           onClick={() => setSelectedCategory('all')}
           className={`px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap cursor-pointer ${
@@ -169,9 +279,9 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
               : 'bg-white dark:bg-[#202020] border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#282828]'
           }`}
         >
-          كافة الأقسام ({templates.length})
+          كافة الأصناف ({safeTemplates.length})
         </button>
-        {categories.map(cat => (
+        {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
@@ -206,15 +316,15 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
               {/* Product Header & Image */}
               <div className="p-3.5 space-y-3">
                 <div className="flex items-start gap-3">
-                  {/* Thumbnail Image */}
+                  {/* Thumbnail Image with fallback to official RZ Logo only */}
                   <div className="relative w-20 h-20 rounded-xl bg-gray-50 dark:bg-[#181818] p-1.5 border border-gray-100 dark:border-gray-800 flex items-center justify-center shrink-0">
                     <img
-                      src={template.image}
+                      src={template.image || RZ_OFFICIAL_FALLBACK_LOGO}
                       alt={template.name}
                       referrerPolicy="no-referrer"
                       className="max-h-full max-w-full object-contain"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = "https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp";
+                        (e.target as HTMLImageElement).src = RZ_OFFICIAL_FALLBACK_LOGO;
                       }}
                     />
                     {isAdded && (
@@ -226,18 +336,30 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
 
                   {/* Title & Badges */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-50 dark:bg-red-950/50 text-[#ea1b25] border border-red-200/50">
-                        {template.category}
-                      </span>
-                      {template.volume && (
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-[#252525] text-gray-600 dark:text-gray-300">
-                          {template.volume}
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-50 dark:bg-red-950/50 text-[#ea1b25] border border-red-200/50">
+                          {template.category}
                         </span>
-                      )}
-                      <span className="text-[10px] font-mono text-gray-400">
-                        #{template.code}
-                      </span>
+                        {template.volume && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-[#252525] text-gray-600 dark:text-gray-300">
+                            {template.volume}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-mono text-gray-400">
+                          #{template.code}
+                        </span>
+                      </div>
+
+                      {/* Direct Edit Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(template)}
+                        className="p-1.5 text-gray-500 hover:text-[#ea1b25] hover:bg-gray-100 dark:hover:bg-[#282828] rounded-lg transition cursor-pointer shrink-0"
+                        title="تعديل صورة أو مواصفات هذا الصنف في الكتالوج"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
 
                     <h4 className="font-bold text-xs text-gray-900 dark:text-white mt-1.5 line-clamp-2 leading-tight">
@@ -255,7 +377,7 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
                 {/* Description & Features Accordion */}
                 <div className="bg-gray-50 dark:bg-[#181818] p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 text-[11px] text-gray-600 dark:text-gray-300">
                   <div className={isExpanded ? '' : 'line-clamp-2 leading-relaxed'}>
-                    {template.description || 'منظف ومحسن ألماني فائق الأداء مصمم لحماية منظومة السيارة وزيادة عمرها الافتراضي.'}
+                    {template.description || 'منتج ألماني فائق الأداء مصمم لحماية منظومة السيارة وزيادة عمرها الافتراضي.'}
                   </div>
 
                   {isExpanded && template.features && template.features.length > 0 && (
@@ -292,16 +414,15 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      {onFillFormWithTemplate && (
-                        <button
-                          type="button"
-                          onClick={() => onFillFormWithTemplate(template)}
-                          className="px-2 py-1 text-[11px] bg-gray-200 hover:bg-gray-300 dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-200 rounded-lg transition cursor-pointer"
-                          title="تعديل في النموذج"
-                        >
-                          تعديل
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(template)}
+                        className="px-2 py-1 text-[11px] bg-gray-200 hover:bg-gray-300 dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-200 rounded-lg transition cursor-pointer flex items-center gap-1"
+                        title="تعديل في الكتالوج"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>تعديل</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => onRemoveFromStore(activeStoreItem.id)}
@@ -334,18 +455,17 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
                       </div>
                     </div>
 
-                    {/* Add Buttons */}
+                    {/* Add & Edit Buttons */}
                     <div className="flex items-center gap-1.5">
-                      {onFillFormWithTemplate && (
-                        <button
-                          type="button"
-                          onClick={() => onFillFormWithTemplate(template)}
-                          className="px-2 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-[#282828] text-gray-700 dark:text-gray-300 rounded-lg text-[11px] font-bold transition cursor-pointer"
-                          title="تعبئة وتعديل قبل الإضافة"
-                        >
-                          تخصيص
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(template)}
+                        className="px-2 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-[#282828] text-gray-700 dark:text-gray-300 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
+                        title="تعديل بيانات أو صورة الصنف قبل الإضافة"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>تعديل</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => onAddTemplateToStore(template, currentPrice)}
@@ -370,8 +490,258 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
             لم يتم العثور على قوالب مطابقة للبحث
           </div>
           <p className="text-xs text-gray-500">
-            جرب البحث باسم آخر أو اختر "كافة الأقسام" لعرض جميع الأصناف الجاهزة.
+            جرب البحث باسم آخر أو اضغط "إضافة قالب جديد" لإنشاء صنف مخصص في الكتالوج.
           </p>
+        </div>
+      )}
+
+      {/* MODAL: EDIT / ADD CATALOG TEMPLATE */}
+      {editingTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white dark:bg-[#202020] rounded-2xl max-w-2xl w-full border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden my-6">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-gray-50 dark:bg-[#1a1a1a]">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#ea1b25] text-white flex items-center justify-center">
+                  <Edit3 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-gray-900 dark:text-white">
+                    {isCreatingNew ? 'إضافة صنف وقالب جديد إلى كتالوج رزويل' : `تعديل صنف: ${editingTemplate.name || 'بدون اسم'}`}
+                  </h3>
+                  <p className="text-[11px] text-gray-500">
+                    يمكنك تغيير الصورة، الكود، الاسم، والسعر والمواصفات وسيتم حفظها مباشرة في الكتالوج والمتجر.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingTemplate(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTemplate} className="p-4 sm:p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+              {/* Image Preview & Upload Section */}
+              <div className="p-3.5 bg-gray-50 dark:bg-[#181818] rounded-xl border border-gray-200 dark:border-gray-700/80 space-y-3">
+                <label className="block text-xs font-bold text-gray-800 dark:text-gray-200">
+                  صورة المنتج (رابط صورة مباشر أو رفع من الجهاز):
+                </label>
+
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  {/* Image Preview Box */}
+                  <div className="w-24 h-24 rounded-xl bg-white dark:bg-[#242424] border-2 border-dashed border-gray-300 dark:border-gray-600 p-2 flex items-center justify-center relative shrink-0 overflow-hidden shadow-inner">
+                    <img
+                      src={imagePreviewError || !editingTemplate.image ? RZ_OFFICIAL_FALLBACK_LOGO : editingTemplate.image}
+                      alt="معاينة الصورة"
+                      className="max-h-full max-w-full object-contain"
+                      onError={() => setImagePreviewError(true)}
+                    />
+                  </div>
+
+                  <div className="flex-1 space-y-2 w-full">
+                    {/* URL Input */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="url"
+                        placeholder="ضع رابط صورة المنتج المباشر (https://...)"
+                        value={editingTemplate.image}
+                        onChange={(e) => {
+                          setEditingTemplate({ ...editingTemplate, image: e.target.value });
+                          setImagePreviewError(false);
+                        }}
+                        className="flex-1 h-9 px-3 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#222] text-gray-900 dark:text-white focus:border-[#ea1b25] focus:outline-none"
+                      />
+                      {editingTemplate.image && editingTemplate.image !== RZ_OFFICIAL_FALLBACK_LOGO && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingTemplate({ ...editingTemplate, image: RZ_OFFICIAL_FALLBACK_LOGO })}
+                          className="p-2 text-xs text-gray-500 hover:text-red-500 bg-gray-100 dark:bg-[#2a2a2a] rounded-lg cursor-pointer"
+                          title="استخدام لوجو الشركة الرسمي كصورة بديلة"
+                        >
+                          استعادة اللوجو
+                        </button>
+                      )}
+                    </div>
+
+                    {/* File Upload Button */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-[#2c2c2c] dark:hover:bg-[#363636] text-gray-800 dark:text-gray-200 text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>اختيار صورة من جهازك / هاتفك</span>
+                      </button>
+                      <span className="text-[11px] text-gray-500">يدعم PNG, JPG, WebP</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Product Basic Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block font-bold mb-1 text-gray-700 dark:text-gray-300">
+                    اسم المنتج (باللغة العربية) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="مثال: رزويل زيت RZ800 5W30 PAO تخليقي بالكامل"
+                    value={editingTemplate.name}
+                    onChange={(e) => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
+                    className="w-full h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] text-gray-900 dark:text-white focus:border-[#ea1b25] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1 text-gray-700 dark:text-gray-300">
+                    كود المنتج / الباركود *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="مثال: RZ800-5W30-4L أو 1050057"
+                    value={editingTemplate.code}
+                    onChange={(e) => setEditingTemplate({ ...editingTemplate, code: e.target.value })}
+                    className="w-full h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-mono text-gray-900 dark:text-white focus:border-[#ea1b25] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1 text-gray-700 dark:text-gray-300">
+                    القسم / التصنيف *
+                  </label>
+                  <select
+                    value={editingTemplate.category}
+                    onChange={(e) => setEditingTemplate({ ...editingTemplate, category: e.target.value })}
+                    className="w-full h-8 px-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] text-gray-900 dark:text-white"
+                  >
+                    <option value="زيوت المحركات">زيوت المحركات</option>
+                    <option value="زيوت ناقل الحركه">زيوت ناقل الحركه</option>
+                    <option value="مياه الردياتير و الاضافات">مياه الردياتير و الاضافات</option>
+                    <option value="اضافات الزيت">اضافات الزيت</option>
+                    <option value="اضافات الوقود">اضافات الوقود</option>
+                    <option value="صيانه و اصلاح">صيانه و اصلاح</option>
+                    <option value="العنايه بالسياره">العنايه بالسياره</option>
+                    <option value="الدراجات الناريه">الدراجات الناريه</option>
+                    <option value="معدات">معدات</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1 text-gray-700 dark:text-gray-300">
+                    حجم أو سعة العبوة
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="مثال: 1 لتر / 4L / 5L / 300 مل / مقاس 60x90 سم"
+                    value={editingTemplate.volume || ''}
+                    onChange={(e) => setEditingTemplate({ ...editingTemplate, volume: e.target.value })}
+                    className="w-full h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] text-gray-900 dark:text-white focus:border-[#ea1b25] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1 text-gray-700 dark:text-gray-300">
+                    السعر المقترح (د.أ) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    required
+                    value={editingTemplate.price}
+                    onChange={(e) => setEditingTemplate({ ...editingTemplate, price: parseFloat(e.target.value) || 0 })}
+                    className="w-full h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] text-gray-900 dark:text-white focus:border-[#ea1b25] focus:outline-none font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1 text-gray-700 dark:text-gray-300">
+                    السعر قبل الخصم (اختياري)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    placeholder="مثال: 15.0"
+                    value={editingTemplate.originalPrice || ''}
+                    onChange={(e) => setEditingTemplate({ ...editingTemplate, originalPrice: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    className="w-full h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] text-gray-900 dark:text-white focus:border-[#ea1b25] focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1 text-gray-700 dark:text-gray-300">
+                    شارة المنشأ والجودة (ألماني أصلي / مخصص)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="مثال: ألماني أصلي DE"
+                    value={editingTemplate.originBadge || 'ألماني أصلي DE'}
+                    onChange={(e) => setEditingTemplate({ ...editingTemplate, originBadge: e.target.value })}
+                    className="w-full h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] text-gray-900 dark:text-white focus:border-[#ea1b25] focus:outline-none font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1 text-gray-700 dark:text-gray-300">
+                    العنوان الإنجليزي أو التسمية الفرعية
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="مثال: RZ Fully Synthetic Engine Oil 5W30"
+                    value={editingTemplate.subtitle || ''}
+                    onChange={(e) => setEditingTemplate({ ...editingTemplate, subtitle: e.target.value })}
+                    className="w-full h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] text-gray-900 dark:text-white focus:border-[#ea1b25] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="text-xs">
+                <label className="block font-bold mb-1 text-gray-700 dark:text-gray-300">
+                  الوصف والشرح الفني للمنتج
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="اكتب شرحاً تفصيلياً لخصائص المنتج، تقنية التركيب، ومجالات الاستخدام..."
+                  value={editingTemplate.description}
+                  onChange={(e) => setEditingTemplate({ ...editingTemplate, description: e.target.value })}
+                  className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] text-gray-900 dark:text-white focus:border-[#ea1b25] focus:outline-none text-xs leading-relaxed"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-200 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingTemplate(null)}
+                  className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#282828] rounded-xl transition cursor-pointer"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#ea1b25] hover:bg-[#c9141d] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isCreatingNew ? 'إضافة الصنف للكتالوج' : 'حفظ التعديلات وتحديث المتجر'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

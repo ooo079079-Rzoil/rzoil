@@ -4,6 +4,8 @@ export interface Product {
   name: string;
   price: number;
   originalPrice?: number;
+  hasDiscount?: boolean;
+  originBadge?: string;
   brand: string;
   category: string;
   subcategory?: string;

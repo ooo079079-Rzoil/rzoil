@@ -1,6 +1,7 @@
 import React from 'react';
 import { Product } from '../types';
 import { ShoppingCart, Eye } from 'lucide-react';
+import { RZ_OFFICIAL_FALLBACK_LOGO } from '../data/products';
 
 interface RelatedProductsProps {
   products: Product[];
@@ -44,7 +45,7 @@ export const RelatedProducts: React.FC<RelatedProductsProps> = ({
               className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-200"
               loading="lazy"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp";
+                (e.target as HTMLImageElement).src = RZ_OFFICIAL_FALLBACK_LOGO;
               }}
             />
             <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

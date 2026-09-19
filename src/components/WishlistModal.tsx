@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Heart, ShoppingCart, Trash2 } from 'lucide-react';
 import { Product } from '../types';
+import { RZ_OFFICIAL_FALLBACK_LOGO } from '../data/products';
 
 interface WishlistModalProps {
   isOpen: boolean;
@@ -59,7 +60,7 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({
                     referrerPolicy="no-referrer"
                     className="w-14 h-14 object-contain bg-white dark:bg-[#1a1a1a] p-1 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://www.rzoil.net/us/164/pidwebp600/7612/f133288936368174447131-1.webp";
+                      (e.target as HTMLImageElement).src = RZ_OFFICIAL_FALLBACK_LOGO;
                     }}
                   />
                   <div className="truncate">
