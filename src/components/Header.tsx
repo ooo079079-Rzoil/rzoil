@@ -126,21 +126,33 @@ export const Header: React.FC<HeaderProps> = ({
             <Home className="w-6 h-6 text-[#ea1b25] group-hover:scale-110 transition-transform" />
           </button>
 
-          {/* Logo: Red RZ badge on the LEFT of the word OIL */}
+          {/* Logo: Red RZ badge on the LEFT of the word OIL with logo icon */}
           <div 
             onClick={onGoHome} 
             dir="ltr"
-            className="cursor-pointer flex items-center gap-1.5 select-none hover:opacity-90 transition"
-            title="رزويل الأردن - RZ Oil Jordan"
+            className="cursor-pointer flex items-center gap-1.5 sm:gap-2 select-none hover:opacity-90 transition"
+            title="رزويل الأردن - Rzoil Jo"
           >
-            <span className="bg-[#ea1b25] text-white font-black text-xl sm:text-2xl px-2.5 py-0.5 rounded-lg tracking-tighter shadow-sm font-sans shrink-0">
-              RZ
-            </span>
+            <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg overflow-hidden border border-red-500/30 bg-red-600 shrink-0 shadow-xs flex items-center justify-center">
+              <img 
+                src="/rzoil-logo.png" 
+                alt="Rzoil Jo Logo" 
+                className="w-full h-full object-contain p-0.5"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+            </div>
             <div className="flex flex-col leading-none font-sans text-left">
-              <span className="font-black text-lg sm:text-xl tracking-tight text-gray-900 dark:text-white">
-                OIL
-              </span>
-              <span className="text-[9px] font-bold text-[#ea1b25] uppercase tracking-widest">
+              <div className="flex items-center gap-1">
+                <span className="font-black text-base sm:text-xl tracking-tight text-gray-900 dark:text-white">
+                  RZOIL
+                </span>
+                <span className="text-[10px] sm:text-xs font-black bg-[#ea1b25] text-white px-1 py-0.5 rounded">
+                  JO
+                </span>
+              </div>
+              <span className="text-[8px] sm:text-[9px] font-bold text-[#ea1b25] uppercase tracking-wider">
                 GERMANY
               </span>
             </div>

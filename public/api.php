@@ -299,6 +299,54 @@ if (isset($connRes['error'])) {
 }
 $conn = $connRes['conn'];
 
+// Auto-ensure required MySQL tables exist
+$conn->query("CREATE TABLE IF NOT EXISTS `rzoil_products` (
+    `id` VARCHAR(64) PRIMARY KEY,
+    `code` VARCHAR(64),
+    `name` VARCHAR(255) NOT NULL,
+    `price` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `original_price` DECIMAL(10,2),
+    `brand` VARCHAR(100) DEFAULT 'رزويل',
+    `category` VARCHAR(100) DEFAULT 'اضافات الوقود',
+    `image` MEDIUMTEXT,
+    `description` TEXT,
+    `volume` VARCHAR(64) DEFAULT '300 مل',
+    `in_stock` TINYINT(1) DEFAULT 1,
+    `features` TEXT,
+    `usage_guide` TEXT,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+$conn->query("CREATE TABLE IF NOT EXISTS `rzoil_orders` (
+    `id` VARCHAR(64) PRIMARY KEY,
+    `order_number` VARCHAR(64) NOT NULL UNIQUE,
+    `customer_name` VARCHAR(255) NOT NULL,
+    `phone` VARCHAR(64) NOT NULL,
+    `city` VARCHAR(100) NOT NULL,
+    `address` TEXT NOT NULL,
+    `notes` TEXT,
+    `items_json` MEDIUMTEXT NOT NULL,
+    `subtotal` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `shipping_cost` DECIMAL(10,2) NOT NULL DEFAULT 3.00,
+    `grand_total` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `status` ENUM('pending', 'processing', 'delivered', 'cancelled') DEFAULT 'pending',
+    `created_at` VARCHAR(64) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+$conn->query("CREATE TABLE IF NOT EXISTS `rzoil_distributors` (
+    `id` VARCHAR(64) PRIMARY KEY,
+    `city` VARCHAR(100) NOT NULL,
+    `area` VARCHAR(255) NOT NULL,
+    `phone` VARCHAR(64) NOT NULL,
+    `address` TEXT,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+$conn->query("CREATE TABLE IF NOT EXISTS `rzoil_settings` (
+    `key_name` VARCHAR(64) PRIMARY KEY,
+    `value_text` TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
 // -------------------------------------------------------------
 // ACTION: CREATE ORDER (حفظ طلب جديد من الزبون في قاعدة البيانات)
 // -------------------------------------------------------------
@@ -503,6 +551,22 @@ if ($action === 'sync_all_data') {
     }
 
     sendJson(true, ['message' => 'تمت مزامنة وحفظ جميع المنتجات والموزعين في قاعدة بيانات InfinityFree بنجاح!']);
+}
+
+// -------------------------------------------------------------
+// ACTION: CLEAR ALL PRODUCTS (تصفير وحذف جميع المنتجات من MySQL)
+// -------------------------------------------------------------
+if ($action === 'clear_all_products') {
+    $conn->query("TRUNCATE TABLE `rzoil_products`");
+    sendJson(true, ['message' => 'تم تصفير جميع المنتجات من قاعدة بيانات MySQL بنجاح']);
+}
+
+// -------------------------------------------------------------
+// ACTION: CLEAR ALL ORDERS (تصفير وحذف جميع الطلبات من MySQL)
+// -------------------------------------------------------------
+if ($action === 'clear_all_orders') {
+    $conn->query("TRUNCATE TABLE `rzoil_orders`");
+    sendJson(true, ['message' => 'تم تصفير جميع الطلبات من قاعدة بيانات MySQL بنجاح']);
 }
 
 // Fallback for unknown action

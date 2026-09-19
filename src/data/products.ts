@@ -794,6 +794,9 @@ export const ALL_INITIAL_PRODUCTS: Product[] = [
 
 export const RELATED_PRODUCTS: Product[] = ALL_INITIAL_PRODUCTS.slice(1, 9);
 
+// Ready-to-use RZ Oil catalog templates with original images, titles, descriptions & codes
+export const RZ_CATALOG_TEMPLATES: Product[] = ALL_INITIAL_PRODUCTS;
+
 export const CATEGORIES: CategoryItem[] = [
   { id: "1", name: "اضافات الوقود", brands: ["الكل", "رزويل"] },
   { id: "2", name: "اضافات الزيت", brands: ["الكل", "رزويل"] },

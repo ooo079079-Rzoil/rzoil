@@ -323,6 +323,52 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
         </div>
 
       </div>
+
+      {/* Mobile Sticky Quick-Action Bar for Phone Customers */}
+      <div className="md:hidden fixed bottom-14 left-0 right-0 z-30 bg-white/95 dark:bg-[#1c1c1c]/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 p-2.5 px-4 shadow-[0_-4px_16px_rgba(0,0,0,0.1)] flex items-center justify-between gap-3">
+        <div className="flex flex-col leading-tight">
+          <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">السعر:</span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-xl font-black text-[#ea1b25]">{product.price.toLocaleString()}</span>
+            <span className="text-xs font-bold text-gray-800 dark:text-gray-200">د.أ</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-1 max-w-[240px]">
+          {quantityInCart === 0 ? (
+            <button
+              onClick={onAddToCart}
+              className="flex-1 h-11 bg-[#ea1b25] hover:bg-[#c9141d] active:scale-95 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span>أضف للسلة</span>
+            </button>
+          ) : (
+            <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-[#252525] p-1 h-11">
+              <button
+                onClick={onIncrementQuantity}
+                className="w-8 h-full bg-[#ea1b25] text-white rounded-lg font-bold text-sm flex items-center justify-center"
+              >
+                +
+              </button>
+              <span className="px-2 font-mono font-bold text-xs">{quantityInCart}</span>
+              <button
+                onClick={onDecrementQuantity}
+                className="w-8 h-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg font-bold text-sm flex items-center justify-center"
+              >
+                -
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={onDirectCheckout}
+            className="flex-1 h-11 bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs font-bold rounded-xl transition flex items-center justify-center shadow-sm cursor-pointer"
+          >
+            <span>شراء الآن</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

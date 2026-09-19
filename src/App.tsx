@@ -14,9 +14,10 @@ import { DistributorsModal } from './components/DistributorsModal';
 import { ContactModal } from './components/ContactModal';
 import { Footer } from './components/Footer';
 import { FloatingWidgets } from './components/FloatingWidgets';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { AdminPanel } from './components/AdminPanel';
 import { DatabaseSetupModal } from './components/DatabaseSetupModal';
-import { getSavedDbConfig, checkServerDbStatus, saveOrderToDatabase } from './services/databaseService';
+import { getSavedDbConfig, checkServerDbStatus, saveOrderToDatabase, clearRemoteProducts, clearRemoteOrders } from './services/databaseService';
 import { Check, ShieldCheck, LogOut } from 'lucide-react';
 
 const INITIAL_ADMIN_CREDS: AdminCredentials = {
@@ -122,10 +123,10 @@ export default function App() {
   // Store Catalog Products
   const [productsList, setProductsList] = useState<Product[]>(() => {
     const saved = localStorage.getItem('rzoil_jordan_products');
-    if (saved) {
+    if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length >= ALL_INITIAL_PRODUCTS.length) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       } catch (e) { /* ignore */ }
@@ -133,7 +134,9 @@ export default function App() {
     return ALL_INITIAL_PRODUCTS;
   });
 
-  const [currentProduct, setCurrentProduct] = useState<Product>(ALL_INITIAL_PRODUCTS[0] || MAIN_PRODUCT);
+  const [currentProduct, setCurrentProduct] = useState<Product>(() => {
+    return (productsList && productsList[0]) || MAIN_PRODUCT;
+  });
   const [viewMode, setViewMode] = useState<'home' | 'product'>('home');
   const [selectedCategory, setSelectedCategory] = useState<string>('الكل');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -142,8 +145,11 @@ export default function App() {
   // Orders State
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem('rzoil_jordan_orders');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    if (saved !== null) {
+      try { 
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) { /* ignore */ }
     }
     return INITIAL_ORDERS;
   });
@@ -446,6 +452,35 @@ export default function App() {
     showToast('تم حذف المنتج بنجاح');
   };
 
+  const handleClearAllProducts = () => {
+    setProductsList([]);
+    localStorage.setItem('rzoil_jordan_products', JSON.stringify([]));
+    if (dbConfig.isConfigured) {
+      clearRemoteProducts(dbConfig).catch(console.warn);
+    }
+    showToast('تم تصفير جميع المنتجات في المتجر بنجاح');
+  };
+
+  const handleClearAllOrders = () => {
+    setOrders([]);
+    localStorage.setItem('rzoil_jordan_orders', JSON.stringify([]));
+    if (dbConfig.isConfigured) {
+      clearRemoteOrders(dbConfig).catch(console.warn);
+    }
+    showToast('تم تصفير جميع الطلبات بنجاح');
+  };
+
+  const handleAddTemplateToStore = (template: Product, customPrice?: number) => {
+    const newProd: Product = {
+      ...template,
+      id: 'prod-' + template.id + '-' + Date.now(),
+      price: customPrice && customPrice > 0 ? customPrice : template.price,
+      inStock: true
+    };
+    setProductsList(prev => [newProd, ...prev]);
+    showToast(`تمت إضافة ${template.name} إلى المتجر بنجاح`);
+  };
+
   const handleUpdateOrderStatus = (orderId: string, status: Order['status']) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
     showToast('تم تحديث حالة الطلب');
@@ -710,6 +745,9 @@ export default function App() {
         onToggleProductStock={handleToggleProductStock}
         onAddProduct={handleAddProduct}
         onDeleteProduct={handleDeleteProduct}
+        onClearAllProducts={handleClearAllProducts}
+        onClearAllOrders={handleClearAllOrders}
+        onAddTemplateToStore={handleAddTemplateToStore}
         orders={orders}
         onUpdateOrderStatus={handleUpdateOrderStatus}
         onDeleteOrder={handleDeleteOrder}
@@ -736,6 +774,19 @@ export default function App() {
         products={productsList}
         distributors={distributors}
         orders={orders}
+      />
+
+      {/* Mobile Bottom Navigation Bar */}
+      <MobileBottomNav
+        currentView={viewMode}
+        onGoHome={handleGoHome}
+        onOpenCategories={() => setIsMenuOpen(true)}
+        onOpenCart={() => setIsCartOpen(true)}
+        onOpenWishlist={() => setIsWishlistOpen(true)}
+        onOpenContact={() => setIsContactOpen(true)}
+        cartCount={cartCount}
+        wishlistCount={wishlistIds.length}
+        whatsappPhone={settings.whatsappPhone}
       />
 
       {/* Footer */}

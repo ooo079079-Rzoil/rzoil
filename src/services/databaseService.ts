@@ -230,3 +230,47 @@ export const syncLocalDataToDatabase = async (
     };
   }
 };
+
+export const clearRemoteProducts = async (
+  config: DatabaseConfig
+): Promise<{ success: boolean; message: string }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=clear_all_products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    return {
+      success: !!data.success,
+      message: data.message || 'تم تصفير المنتجات في قاعدة البيانات'
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      message: 'تعذر الاتصال بالسيرفر لتصفير المنتجات: ' + e.message
+    };
+  }
+};
+
+export const clearRemoteOrders = async (
+  config: DatabaseConfig
+): Promise<{ success: boolean; message: string }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=clear_all_orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    return {
+      success: !!data.success,
+      message: data.message || 'تم تصفير الطلبات في قاعدة البيانات'
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      message: 'تعذر الاتصال بالسيرفر لتصفير الطلبات: ' + e.message
+    };
+  }
+};

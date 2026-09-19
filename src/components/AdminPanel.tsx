@@ -33,9 +33,11 @@ import {
   Database,
   Server,
   Zap,
-  Download
+  Download,
+  Sparkles
 } from 'lucide-react';
 import { Product, Order, Distributor, StoreSettings, AdminCredentials, DatabaseConfig } from '../types';
+import { RzTemplateLibrary } from './RzTemplateLibrary';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -44,6 +46,10 @@ interface AdminPanelProps {
   adminCredentials: AdminCredentials;
   onUpdateAdminCredentials: (creds: AdminCredentials) => void;
   products: Product[];
+  templates?: Product[];
+  onAddTemplateToStore?: (template: Product, customPrice: number) => void;
+  onClearAllProducts?: () => void;
+  onClearAllOrders?: () => void;
   onUpdateProductPrice: (productId: string, newPrice: number) => void;
   onToggleProductStock: (productId: string) => void;
   onAddProduct: (product: Product) => void;
@@ -69,6 +75,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   adminCredentials,
   onUpdateAdminCredentials,
   products,
+  templates = [],
+  onAddTemplateToStore,
+  onClearAllProducts,
+  onClearAllOrders,
   onUpdateProductPrice,
   onToggleProductStock,
   onAddProduct,
@@ -86,7 +96,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   dbConfig,
   onOpenDbSetup
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'distributors' | 'database' | 'settings' | 'security'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'templates' | 'distributors' | 'database' | 'settings' | 'security'>('overview');
   
   // Product edit states
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
@@ -189,6 +199,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     reader.readAsDataURL(file);
   };
 
+  const handleSelectTemplateForForm = (template: Product) => {
+    setNewProduct({
+      name: template.name,
+      code: template.code,
+      price: template.price || 10,
+      brand: template.brand || 'رزويل',
+      category: template.category || 'اضافات الوقود',
+      image: template.image,
+      description: template.description || '',
+      volume: template.volume || '300 مل',
+      inStock: true
+    });
+    setUploadedImageFile(template.image);
+    setUploadedFileName(`قالب رسمي: ${template.name}`);
+  };
+
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProduct.name || !newProduct.price) {
@@ -197,7 +223,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
 
     if (!uploadedImageFile && !newProduct.image) {
-      alert('يرجى تحميل صورة للمنتج من جهاز الكمبيوتر');
+      alert('يرجى تحميل صورة للمنتج أو اختيار قالب جاهز');
       return;
     }
 
@@ -408,7 +434,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             }`}
           >
             <Package className="w-4 h-4" />
-            <span>المنتجات والأسعار (د.أ)</span>
+            <span>المنتجات المعروضة بالمتجر</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/20 text-white font-bold">
+              {products.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('templates')}
+            className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'templates'
+                ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-sm font-bold'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#2d2d2d]'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>كتالوج قوالب رزويل (صور وشروحات جاهزة) ⚡</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/20 text-white font-bold">
+              {templates.length}
+            </span>
           </button>
 
           <button
@@ -628,15 +672,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   ))}
                 </div>
 
-                <div className="relative w-full sm:w-64">
-                  <input
-                    type="text"
-                    placeholder="بحث باسم العميل، الهاتف، أو المدينة..."
-                    value={orderSearch}
-                    onChange={(e) => setOrderSearch(e.target.value)}
-                    className="w-full h-8 pr-8 pl-3 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#1a1a1a] text-gray-900 dark:text-white focus:outline-none focus:border-[#ea1b25]"
-                  />
-                  <Search className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-2.5" />
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-64">
+                    <input
+                      type="text"
+                      placeholder="بحث باسم العميل، الهاتف، أو المدينة..."
+                      value={orderSearch}
+                      onChange={(e) => setOrderSearch(e.target.value)}
+                      className="w-full h-8 pr-8 pl-3 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#1a1a1a] text-gray-900 dark:text-white focus:outline-none focus:border-[#ea1b25]"
+                    />
+                    <Search className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-2.5" />
+                  </div>
+
+                  {orders.length > 0 && onClearAllOrders && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm('هل أنت متأكد من رغبتك في تصفير وحذف جميع الطلبات؟')) {
+                          onClearAllOrders();
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-950/60 dark:hover:bg-red-900 text-red-600 dark:text-red-300 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                      title="تصفير وحذف جميع الطلبات"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>تصفير الطلبات</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -733,11 +795,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           {/* TAB 3: PRODUCTS & PRICING IN JOD + COMPUTER FILE UPLOAD */}
           {activeTab === 'products' && (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-[#202020] p-3 rounded-xl border border-gray-200 dark:border-gray-800">
-                <div className="relative w-full sm:w-72">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white dark:bg-[#202020] p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+                <div className="relative flex-1 max-w-md">
                   <input
                     type="text"
-                    placeholder="ابحث عن منتج، كود، أو تصنيف..."
+                    placeholder="ابحث عن منتج معروض، كود، أو تصنيف..."
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
                     className="w-full h-9 pr-8 pl-3 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#1a1a1a] text-gray-900 dark:text-white focus:outline-none focus:border-[#ea1b25]"
@@ -745,13 +807,41 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <Search className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-3" />
                 </div>
 
-                <button
-                  onClick={() => setIsAddProductOpen(!isAddProductOpen)}
-                  className="w-full sm:w-auto px-4 py-2 bg-[#ea1b25] hover:bg-[#c9141d] text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>{isAddProductOpen ? 'إلغاء الإضافة' : 'إضافة صنف جديد وتحميل صورة'}</span>
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('templates')}
+                    className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>⚡ تصفح قوالب رزويل الجاهزة</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAddProductOpen(!isAddProductOpen)}
+                    className="px-3.5 py-2 bg-gray-900 hover:bg-black dark:bg-gray-800 dark:hover:bg-gray-700 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{isAddProductOpen ? 'إلغاء الإضافة' : 'إضافة صنف مخصص'}</span>
+                  </button>
+
+                  {products.length > 0 && onClearAllProducts && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm('هل أنت متأكد من رغبتك في تصفير وحذف جميع المنتجات المعروضة في المتجر للبدء من الصفر؟ (يمكنك إضافة أي صنف تريده لاحقاً من قوالب رزويل بضغطة زر)')) {
+                          onClearAllProducts();
+                        }
+                      }}
+                      className="px-3 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap border border-red-200 dark:border-red-900/50"
+                      title="تصفير جميع منتجات المتجر"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>تصفير المتجر</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Category Filter Pills for Admin */}
@@ -774,10 +864,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               {/* Add Product Form with Computer File Upload */}
               {isAddProductOpen && (
                 <form onSubmit={handleCreateProduct} className="p-4 bg-white dark:bg-[#202020] rounded-xl border-2 border-red-200 dark:border-red-950 space-y-4 text-xs animate-scale-up">
-                  <h4 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2 text-[#ea1b25]">
-                    <Plus className="w-4 h-4" />
-                    <span>إضافة منتج جديد لكتالوج رزويل الأردن</span>
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2 text-[#ea1b25]">
+                      <Plus className="w-4 h-4" />
+                      <span>إضافة منتج جديد لكتالوج رزويل الأردن</span>
+                    </h4>
+                  </div>
+
+                  {/* Template Quick Selection */}
+                  {templates && templates.length > 0 && (
+                    <div className="p-3 bg-red-50/80 dark:bg-red-950/30 rounded-xl border border-red-200 dark:border-red-900/50 space-y-1.5">
+                      <label className="block font-bold text-xs text-red-700 dark:text-red-300 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-[#ea1b25]" />
+                        <span>تعبئة سريعة من قوالب رزويل الجاهزة (الصور والشروحات الألمانية الأصلية)</span>
+                      </label>
+                      <select
+                        onChange={(e) => {
+                          const selectedId = e.target.value;
+                          if (!selectedId) return;
+                          const tmpl = templates.find(t => t.id === selectedId);
+                          if (tmpl) {
+                            handleSelectTemplateForForm(tmpl);
+                          }
+                        }}
+                        defaultValue=""
+                        className="w-full h-8 px-2.5 rounded-lg border border-red-300 dark:border-red-800 bg-white dark:bg-[#1a1a1a] text-xs font-bold text-gray-900 dark:text-white focus:outline-none"
+                      >
+                        <option value="">-- اختر قالباً لتعبئة الاسم والصورة والشرح والمواصفات فوراً --</option>
+                        {templates.map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} ({t.category}) - #{t.code}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-gray-500">
+                        عند اختيار أي صنف، يتم جلب صورته وشرحه ومواصفاته فوراً، وتستطيع تعديل السعر والضغط على حفظ!
+                      </p>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
@@ -989,8 +1113,40 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </form>
               )}
 
-              {/* Products Table */}
-              <div className="bg-white dark:bg-[#202020] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+              {/* Products Table or Empty State */}
+              {products.length === 0 ? (
+                <div className="p-8 text-center bg-white dark:bg-[#202020] rounded-2xl border-2 border-dashed border-red-200 dark:border-red-900/50 space-y-4 shadow-xs">
+                  <div className="w-16 h-16 bg-red-50 dark:bg-red-950/50 text-[#ea1b25] rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+                    <Sparkles className="w-8 h-8" />
+                  </div>
+                  <div className="max-w-md mx-auto space-y-1.5">
+                    <h4 className="font-black text-base text-gray-900 dark:text-white">
+                      المتجر حالياً مصفّر وخالٍ من المنتجات
+                    </h4>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      لقد تم تصفير المتجر بنجاح كما طلبت. يمكنك الآن إضافة المنتجات التي تريدها فوراً بالصور والشروحات الألمانية الرسمية المحفوظة في كتالوج القوالب، مع تحديد السعر بالدينار الأردني!
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('templates')}
+                      className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4 text-amber-300" />
+                      <span>تصفح كتالوج رزويل وإضافة المنتجات فوراً (30+ صنف)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddProductOpen(true)}
+                      className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold transition cursor-pointer"
+                    >
+                      إضافة صنف مخصص
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white dark:bg-[#202020] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-right">
                     <thead className="bg-gray-50 dark:bg-[#181818] text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
@@ -1094,6 +1250,37 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </table>
                 </div>
               </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: RZ OIL GERMANY OFFICIAL TEMPLATES CATALOG */}
+          {activeTab === 'templates' && (
+            <div className="space-y-4">
+              <RzTemplateLibrary
+                templates={templates}
+                currentStoreProducts={products}
+                onAddTemplateToStore={(template, customPrice) => {
+                  if (onAddTemplateToStore) {
+                    onAddTemplateToStore(template, customPrice);
+                  } else {
+                    onAddProduct({
+                      ...template,
+                      id: 'prod-' + template.id + '-' + Date.now(),
+                      price: customPrice > 0 ? customPrice : template.price,
+                      inStock: true
+                    });
+                  }
+                }}
+                onRemoveFromStore={(productId) => {
+                  onDeleteProduct(productId);
+                }}
+                onFillFormWithTemplate={(template) => {
+                  handleSelectTemplateForForm(template);
+                  setActiveTab('products');
+                  setIsAddProductOpen(true);
+                }}
+              />
             </div>
           )}
 

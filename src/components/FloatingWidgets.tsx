@@ -41,7 +41,7 @@ export const FloatingWidgets: React.FC<FloatingWidgetsProps> = ({
   };
 
   return (
-    <div className="fixed bottom-5 left-5 z-40 flex flex-col items-center gap-3">
+    <div className="fixed bottom-20 md:bottom-5 left-3 sm:left-5 z-40 flex flex-col items-center gap-2.5">
       {/* Scroll to Top */}
       {showScrollTop && (
         <button
