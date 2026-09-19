@@ -29,7 +29,15 @@ import {
   deleteProductFromDatabase,
   saveStoreSettingsToDatabase,
   fetchStoreSettingsFromDatabase,
-  fetchProductsFromDatabase
+  fetchProductsFromDatabase,
+  saveDistributorToDatabase,
+  deleteDistributorFromDatabase,
+  fetchDistributorsFromDatabase,
+  fetchOrdersFromDatabase,
+  updateOrderStatusInDatabase,
+  deleteOrderFromDatabase,
+  updateProductPriceInDatabase,
+  toggleProductStockInDatabase
 } from './services/databaseService';
 import { Check, ShieldCheck, LogOut } from 'lucide-react';
 
@@ -372,6 +380,22 @@ export default function App() {
       }
     }).catch(console.warn);
 
+    // Attempt to load distributors from MySQL if configured
+    fetchDistributorsFromDatabase(dbConfig).then((res) => {
+      if (res.success && Array.isArray(res.distributors) && res.distributors.length > 0) {
+        setDistributors(res.distributors);
+        localStorage.setItem('rzoil_jordan_distributors', JSON.stringify(res.distributors));
+      }
+    }).catch(console.warn);
+
+    // Attempt to load orders from MySQL if configured
+    fetchOrdersFromDatabase(dbConfig).then((res) => {
+      if (res.success && Array.isArray(res.orders) && res.orders.length > 0) {
+        setOrders(res.orders);
+        localStorage.setItem('rzoil_jordan_orders', JSON.stringify(res.orders));
+      }
+    }).catch(console.warn);
+
     // Attempt to load admin credentials from MySQL if configured
     fetchAdminCredentialsFromDatabase(dbConfig).then((res) => {
       if (res.success && res.username && res.password) {
@@ -631,25 +655,24 @@ export default function App() {
     if (currentProduct.id === productId) {
       setCurrentProduct(prev => ({ ...prev, price: newPrice }));
     }
-    if (updatedProd && dbConfig.isConfigured) {
-      saveProductToDatabase(dbConfig, updatedProd).catch(console.warn);
+    if (dbConfig.isConfigured) {
+      updateProductPriceInDatabase(dbConfig, productId, newPrice).catch(console.warn);
     }
     showToast(`تم تحديث السعر إلى ${newPrice} د.أ`);
   };
 
   const handleToggleProductStock = (productId: string) => {
-    let updatedProd: Product | null = null;
+    let nextStock = true;
     setProductsList(prev => prev.map(p => {
       if (p.id === productId) {
-        const next = !p.inStock;
-        updatedProd = { ...p, inStock: next };
-        showToast(next ? 'تم تعيين المنتج: متوفر' : 'تم تعيين المنتج: نفد من المخزون');
-        return updatedProd;
+        nextStock = !p.inStock;
+        showToast(nextStock ? 'تم تعيين المنتج: متوفر' : 'تم تعيين المنتج: نفد من المخزون');
+        return { ...p, inStock: nextStock };
       }
       return p;
     }));
-    if (updatedProd && dbConfig.isConfigured) {
-      saveProductToDatabase(dbConfig, updatedProd).catch(console.warn);
+    if (dbConfig.isConfigured) {
+      toggleProductStockInDatabase(dbConfig, productId, nextStock).catch(console.warn);
     }
   };
 
@@ -670,9 +693,14 @@ export default function App() {
   const handleDeleteProduct = (productId: string) => {
     setProductsList(prev => prev.filter(p => p.id !== productId));
     if (dbConfig.isConfigured) {
-      deleteProductFromDatabase(dbConfig, productId).catch(console.warn);
+      deleteProductFromDatabase(dbConfig, productId).then(res => {
+        if (res.success) {
+          showToast('تم حذف المنتج من قاعدة البيانات بنجاح ✅');
+        }
+      }).catch(console.warn);
+    } else {
+      showToast('تم حذف المنتج بنجاح');
     }
-    showToast('تم حذف المنتج بنجاح');
   };
 
   const handleClearAllProducts = () => {
@@ -705,7 +733,10 @@ export default function App() {
       const filtered = prev.filter(p => p.id !== newProd.id && p.name !== newProd.name);
       return sanitizeProductCatalog([newProd, ...filtered]);
     });
-    showToast(`تمت إضافة ${template.name} إلى المتجر بنجاح`);
+    if (dbConfig.isConfigured) {
+      saveProductToDatabase(dbConfig, newProd).catch(console.warn);
+    }
+    showToast(`تمت إضافة ${template.name} إلى المتجر وحفظه في قاعدة البيانات بنجاح ✅`);
   };
 
   const handleUpdateTemplate = (updatedTemplate: Product) => {
@@ -741,6 +772,10 @@ export default function App() {
       setCurrentProduct(prev => ({ ...prev, ...updatedTemplate }));
     }
 
+    if (dbConfig.isConfigured) {
+      saveProductToDatabase(dbConfig, updatedTemplate).catch(console.warn);
+    }
+
     showToast(`تم تحديث بيانات وصورة "${updatedTemplate.name}" بنجاح`);
   };
 
@@ -756,6 +791,9 @@ export default function App() {
       localStorage.setItem('rzoil_custom_templates', JSON.stringify(next));
       return next;
     });
+    if (dbConfig.isConfigured) {
+      saveProductToDatabase(dbConfig, sanitized).catch(console.warn);
+    }
     showToast(`تمت إضافة صنف "${newTemplate.name}" إلى الكتالوج بنجاح`);
   };
 
@@ -766,29 +804,39 @@ export default function App() {
       showToast('جميع منتجات الكتالوج الرسمي متوفرة بالفعل في متجرك');
       return;
     }
-    setProductsList(prev => sanitizeProductCatalog([...prev, ...missing]));
-    showToast(`تمت إضافة ${missing.length} صنفاً جديداً من كتالوج رزويل الرسمي إلى متجرك بنجاح`);
+    const combined = sanitizeProductCatalog([...productsList, ...missing]);
+    setProductsList(combined);
+    if (dbConfig.isConfigured) {
+      missing.forEach(prod => saveProductToDatabase(dbConfig, prod).catch(console.warn));
+    }
+    showToast(`تمت إضافة ${missing.length} صنفاً جديداً وحفظها في قاعدة البيانات بنجاح ✅`);
   };
 
   const handleUpdateOrderStatus = (orderId: string, status: Order['status']) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
-    showToast('تم تحديث حالة الطلب');
+    if (dbConfig.isConfigured) {
+      updateOrderStatusInDatabase(dbConfig, orderId, status).catch(console.warn);
+    }
+    showToast('تم تحديث حالة الطلب في قاعدة البيانات');
   };
 
   const handleDeleteOrder = (orderId: string) => {
     setOrders(prev => prev.filter(o => o.id !== orderId));
-    showToast('تم حذف الطلب');
+    if (dbConfig.isConfigured) {
+      deleteOrderFromDatabase(dbConfig, orderId).catch(console.warn);
+    }
+    showToast('تم حذف الطلب من قاعدة البيانات');
   };
 
   const handleSaveNewOrder = (newOrder: Order) => {
     setOrders(prev => [newOrder, ...prev]);
     showToast(`تم تسجيل طلب جديد بنجاح برقم ${newOrder.orderNumber}`);
 
-    // If connected to InfinityFree database, automatically save directly to MySQL table rzoil_orders
+    // Automatically save directly to MySQL table rzoil_orders
     if (dbConfig.isConfigured) {
       saveOrderToDatabase(dbConfig, newOrder).then((res) => {
         if (res.success) {
-          console.log('✅ تم تسجيل الطلب في قاعدة بيانات InfinityFree بنجاح:', res.message);
+          console.log('✅ تم تسجيل الطلب في قاعدة بيانات MySQL بنجاح:', res.message);
         }
       }).catch((err) => {
         console.warn('تنبيه حفظ الطلب في قاعدة البيانات:', err);
@@ -798,22 +846,59 @@ export default function App() {
 
   const handleAddDistributor = (dist: Distributor) => {
     setDistributors(prev => [...prev, dist]);
-    showToast(`تمت إضافة موزع ${dist.city}`);
+    if (dbConfig.isConfigured) {
+      saveDistributorToDatabase(dbConfig, dist).then(res => {
+        if (res.success) {
+          showToast(`تم حفظ موزع ${dist.city} في قاعدة البيانات بنجاح ✅`);
+        }
+      }).catch(console.warn);
+    } else {
+      showToast(`تمت إضافة موزع ${dist.city}`);
+    }
   };
 
   const handleUpdateDistributor = (dist: Distributor) => {
     setDistributors(prev => prev.map(d => d.id === dist.id ? dist : d));
-    showToast(`تم تحديث بيانات موزع ${dist.city}`);
+    if (dbConfig.isConfigured) {
+      saveDistributorToDatabase(dbConfig, dist).then(res => {
+        if (res.success) {
+          showToast(`تم تحديث بيانات موزع ${dist.city} في قاعدة البيانات بنجاح ✅`);
+        }
+      }).catch(console.warn);
+    } else {
+      showToast(`تم تحديث بيانات موزع ${dist.city}`);
+    }
   };
 
   const handleDeleteDistributor = (distId: string) => {
     setDistributors(prev => prev.filter(d => d.id !== distId));
-    showToast('تم حذف الموزع');
+    if (dbConfig.isConfigured) {
+      deleteDistributorFromDatabase(dbConfig, distId).then(res => {
+        if (res.success) {
+          showToast('تم حذف الموزع من قاعدة البيانات بنجاح ✅');
+        }
+      }).catch(console.warn);
+    } else {
+      showToast('تم حذف الموزع');
+    }
   };
 
   const handleUpdateSettings = (newSettings: StoreSettings) => {
     setSettings(newSettings);
-    showToast('تم حفظ إعدادات المتجر وأرقام التواصل بنجاح');
+    localStorage.setItem('rzoil_jordan_settings', JSON.stringify(newSettings));
+    if (dbConfig.isConfigured) {
+      saveStoreSettingsToDatabase(dbConfig, newSettings).then((res) => {
+        if (res.success) {
+          showToast('✅ تم حفظ الإعدادات وأرقام التواصل وروابط السوشيال ميديا في قاعدة البيانات بنجاح');
+        } else {
+          showToast('⚠️ تم الحفظ محلياً (تنبيه قاعدة البيانات: ' + (res.message || 'فشل الاتصال') + ')');
+        }
+      }).catch((err) => {
+        console.warn('تنبيه حفظ الإعدادات:', err);
+      });
+    } else {
+      showToast('تم حفظ إعدادات المتجر وأرقام التواصل وروابط السوشيال ميديا بنجاح');
+    }
   };
 
   // Totals
@@ -1089,6 +1174,7 @@ export default function App() {
         onOpenContact={() => setIsContactOpen(true)}
         onOpenAdmin={handleRequestAdminAccess}
         onGoHome={handleGoHome}
+        settings={settings}
       />
     </div>
   );

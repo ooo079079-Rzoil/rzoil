@@ -420,11 +420,192 @@ export const fetchStoreSettingsFromDatabase = async (
       if (s.supportPhone) parsed.supportPhone = s.supportPhone;
       if (s.whatsappPhone) parsed.whatsappPhone = s.whatsappPhone;
       if (s.workingHours) parsed.workingHours = s.workingHours;
+      if (s.facebookUrl) parsed.facebookUrl = s.facebookUrl;
+      if (s.twitterUrl) parsed.twitterUrl = s.twitterUrl;
+      if (s.instagramUrl) parsed.instagramUrl = s.instagramUrl;
+      if (s.tiktokUrl) parsed.tiktokUrl = s.tiktokUrl;
+      if (s.youtubeUrl) parsed.youtubeUrl = s.youtubeUrl;
+      if (s.supportEmail) parsed.supportEmail = s.supportEmail;
       return { settings: parsed, success: true };
     }
     return { success: false };
   } catch (e) {
     return { success: false };
+  }
+};
+
+/**
+ * Save a distributor directly to MySQL database
+ */
+export const saveDistributorToDatabase = async (
+  config: DatabaseConfig,
+  distributor: Distributor
+): Promise<{ success: boolean; message: string }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=save_distributor`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ distributor })
+    });
+    const data = await res.json();
+    return { success: !!data.success, message: data.message || 'تم حفظ الموزع' };
+  } catch (e: any) {
+    return { success: false, message: e.message };
+  }
+};
+
+/**
+ * Delete a distributor from MySQL database
+ */
+export const deleteDistributorFromDatabase = async (
+  config: DatabaseConfig,
+  distributorId: string
+): Promise<{ success: boolean; message: string }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=delete_distributor`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ distributorId })
+    });
+    const data = await res.json();
+    return { success: !!data.success, message: data.message || 'تم حذف الموزع' };
+  } catch (e: any) {
+    return { success: false, message: e.message };
+  }
+};
+
+/**
+ * Fetch all distributors from MySQL database
+ */
+export const fetchDistributorsFromDatabase = async (
+  config: DatabaseConfig
+): Promise<{ distributors?: Distributor[]; success: boolean }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=get_distributors`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) return { success: false };
+    const data = await res.json();
+    if (data.success && Array.isArray(data.distributors)) {
+      return { distributors: data.distributors, success: true };
+    }
+    return { success: false };
+  } catch (e) {
+    return { success: false };
+  }
+};
+
+/**
+ * Fetch all orders from MySQL database
+ */
+export const fetchOrdersFromDatabase = async (
+  config: DatabaseConfig
+): Promise<{ orders?: Order[]; success: boolean }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=get_orders`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) return { success: false };
+    const data = await res.json();
+    if (data.success && Array.isArray(data.orders)) {
+      return { orders: data.orders, success: true };
+    }
+    return { success: false };
+  } catch (e) {
+    return { success: false };
+  }
+};
+
+/**
+ * Update order status in MySQL database
+ */
+export const updateOrderStatusInDatabase = async (
+  config: DatabaseConfig,
+  orderId: string,
+  status: Order['status']
+): Promise<{ success: boolean; message: string }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=update_order_status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId, status })
+    });
+    const data = await res.json();
+    return { success: !!data.success, message: data.message || 'تم تحديث حالة الطلب' };
+  } catch (e: any) {
+    return { success: false, message: e.message };
+  }
+};
+
+/**
+ * Delete order from MySQL database
+ */
+export const deleteOrderFromDatabase = async (
+  config: DatabaseConfig,
+  orderId: string
+): Promise<{ success: boolean; message: string }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=delete_order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId })
+    });
+    const data = await res.json();
+    return { success: !!data.success, message: data.message || 'تم حذف الطلب' };
+  } catch (e: any) {
+    return { success: false, message: e.message };
+  }
+};
+
+/**
+ * Update product price in MySQL database
+ */
+export const updateProductPriceInDatabase = async (
+  config: DatabaseConfig,
+  productId: string,
+  price: number
+): Promise<{ success: boolean; message: string }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=update_product_price`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId, price })
+    });
+    const data = await res.json();
+    return { success: !!data.success, message: data.message || 'تم تحديث السعر' };
+  } catch (e: any) {
+    return { success: false, message: e.message };
+  }
+};
+
+/**
+ * Toggle product stock in MySQL database
+ */
+export const toggleProductStockInDatabase = async (
+  config: DatabaseConfig,
+  productId: string,
+  inStock: boolean
+): Promise<{ success: boolean; message: string }> => {
+  const endpoint = config.apiEndpoint || './api.php';
+  try {
+    const res = await fetch(`${endpoint}?action=toggle_product_stock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId, inStock: inStock ? 1 : 0 })
+    });
+    const data = await res.json();
+    return { success: !!data.success, message: data.message || 'تم تحديث المخزون' };
+  } catch (e: any) {
+    return { success: false, message: e.message };
   }
 };
 

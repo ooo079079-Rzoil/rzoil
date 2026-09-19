@@ -2020,27 +2020,109 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block font-bold mb-1">هاتف خدمة العملاء الأردني</label>
                       <input
                         type="text"
                         value={localSettings.supportPhone}
                         onChange={(e) => setLocalSettings({ ...localSettings, supportPhone: e.target.value })}
-                        className="w-full h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-mono text-left"
+                        className="w-full h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-mono text-left font-bold"
                         dir="ltr"
+                        placeholder="0791234567"
                       />
                     </div>
 
                     <div>
-                      <label className="block font-bold mb-1">رقم الواتساب الأردني للطلبات</label>
+                      <label className="block font-bold mb-1 text-green-600">رقم الواتساب الأردني للطلبات والمحادثات</label>
                       <input
                         type="text"
                         value={localSettings.whatsappPhone}
                         onChange={(e) => setLocalSettings({ ...localSettings, whatsappPhone: e.target.value })}
-                        className="w-full h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-mono text-left"
+                        className="w-full h-9 px-3 rounded-lg border border-green-300 dark:border-green-800 bg-gray-50 dark:bg-[#181818] font-mono text-left font-bold text-green-600"
                         dir="ltr"
+                        placeholder="0791234567"
                       />
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                    <h5 className="font-bold text-xs text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <span>روابط منصات التواصل الاجتماعي ومواقع التواصل (Social Media Links):</span>
+                    </h5>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-bold mb-1 text-blue-600">رابط صفحة فيسبوك (Facebook URL)</label>
+                        <input
+                          type="url"
+                          placeholder="https://facebook.com/yourpage"
+                          value={localSettings.facebookUrl || ''}
+                          onChange={(e) => setLocalSettings({ ...localSettings, facebookUrl: e.target.value })}
+                          className="w-full h-9 px-3 rounded-lg border border-blue-200 dark:border-blue-900 bg-gray-50 dark:bg-[#181818] font-mono text-left"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold mb-1 text-pink-600">رابط حساب إنستغرام (Instagram URL)</label>
+                        <input
+                          type="url"
+                          placeholder="https://instagram.com/yourhandle"
+                          value={localSettings.instagramUrl || ''}
+                          onChange={(e) => setLocalSettings({ ...localSettings, instagramUrl: e.target.value })}
+                          className="w-full h-9 px-3 rounded-lg border border-pink-200 dark:border-pink-900 bg-gray-50 dark:bg-[#181818] font-mono text-left"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold mb-1 text-gray-900 dark:text-gray-100">رابط حساب تيك توك (TikTok URL)</label>
+                        <input
+                          type="url"
+                          placeholder="https://tiktok.com/@youraccount"
+                          value={localSettings.tiktokUrl || ''}
+                          onChange={(e) => setLocalSettings({ ...localSettings, tiktokUrl: e.target.value })}
+                          className="w-full h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-mono text-left"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold mb-1 text-sky-500">رابط حساب إكس / تويتر (Twitter / X URL)</label>
+                        <input
+                          type="url"
+                          placeholder="https://twitter.com/yourhandle"
+                          value={localSettings.twitterUrl || ''}
+                          onChange={(e) => setLocalSettings({ ...localSettings, twitterUrl: e.target.value })}
+                          className="w-full h-9 px-3 rounded-lg border border-sky-200 dark:border-sky-900 bg-gray-50 dark:bg-[#181818] font-mono text-left"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold mb-1 text-red-600">رابط قناة يوتيوب (YouTube Channel)</label>
+                        <input
+                          type="url"
+                          placeholder="https://youtube.com/@yourchannel"
+                          value={localSettings.youtubeUrl || ''}
+                          onChange={(e) => setLocalSettings({ ...localSettings, youtubeUrl: e.target.value })}
+                          className="w-full h-9 px-3 rounded-lg border border-red-200 dark:border-red-900 bg-gray-50 dark:bg-[#181818] font-mono text-left"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold mb-1 text-gray-700 dark:text-gray-300">البريد الإلكتروني الرسمي للدعم (Support Email)</label>
+                        <input
+                          type="email"
+                          placeholder="info@rzoil.jo"
+                          value={localSettings.supportEmail || ''}
+                          onChange={(e) => setLocalSettings({ ...localSettings, supportEmail: e.target.value })}
+                          className="w-full h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#181818] font-mono text-left"
+                          dir="ltr"
+                        />
+                      </div>
                     </div>
                   </div>
 

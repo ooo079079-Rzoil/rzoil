@@ -1,27 +1,41 @@
 import React from 'react';
-import { Facebook, Twitter, MessageSquare, Send, ShieldCheck, Truck, Headphones } from 'lucide-react';
+import { Facebook, Twitter, MessageSquare, ShieldCheck, Truck, Headphones, Instagram, Youtube } from 'lucide-react';
+import { StoreSettings } from '../types';
 
 interface FooterProps {
   onOpenDistributors: () => void;
   onOpenContact: () => void;
   onOpenAdmin: () => void;
   onGoHome?: () => void;
+  settings?: StoreSettings;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenDistributors, onOpenContact, onOpenAdmin, onGoHome }) => {
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://www.rzoil.net/p/7612';
+export const Footer: React.FC<FooterProps> = ({ 
+  onOpenDistributors, 
+  onOpenContact, 
+  onOpenAdmin, 
+  onGoHome,
+  settings 
+}) => {
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://www.rzoil.net';
 
   const shareFacebook = () => {
     window.open(`https://facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`, '_blank');
   };
 
   const shareTwitter = () => {
-    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent('رزويل RZ21G منظف لدوره البنزين 5x1')}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent('متجر زيوت وإضافات رزويل الألمانية RZ Oil Jordan')}`, '_blank');
   };
 
   const shareWhatsApp = () => {
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(currentUrl)}`, '_blank');
   };
+
+  const facebookUrl = settings?.facebookUrl || 'https://facebook.com';
+  const twitterUrl = settings?.twitterUrl || 'https://twitter.com';
+  const instagramUrl = settings?.instagramUrl;
+  const tiktokUrl = settings?.tiktokUrl;
+  const youtubeUrl = settings?.youtubeUrl;
 
   return (
     <footer id="footercontainer" className="w-full bg-[#181818] text-white pt-10 pb-6 border-t-4 border-[#ea1b25] mt-12">
@@ -33,7 +47,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDistributors, onOpenContac
           </div>
           <div>
             <h5 className="font-bold text-sm">شحن لكافة محافظات الأردن</h5>
-            <p className="text-xs text-gray-400">توصيل سريع وآمن حتى باب المنزل</p>
+            <p className="text-xs text-gray-400">توصيل سريع وآمن حتى باب المنزل ({settings?.shippingCost ?? 3} د.أ)</p>
           </div>
         </div>
 
@@ -43,7 +57,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDistributors, onOpenContac
           </div>
           <div>
             <h5 className="font-bold text-sm">جودة ألمانية معتمدة</h5>
-            <p className="text-xs text-gray-400">شهادات فحص TÜV الأصلية</p>
+            <p className="text-xs text-gray-400">شهادات فحص TÜV والأيزو الألمانية</p>
           </div>
         </div>
 
@@ -53,7 +67,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDistributors, onOpenContac
           </div>
           <div>
             <h5 className="font-bold text-sm">دعم واستشارات فنية</h5>
-            <p className="text-xs text-gray-400">فريق متخصص لتقديم النصائح لسيارتك</p>
+            <p className="text-xs text-gray-400">هاتف: {settings?.supportPhone || '0791000001'} | واتساب: {settings?.whatsappPhone || '0791000001'}</p>
           </div>
         </div>
       </div>
@@ -61,42 +75,79 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDistributors, onOpenContac
       <div className="max-w-[1280px] mx-auto px-4 space-y-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           
-          {/* Logo & Brand title as in original rzoil.net */}
+          {/* Logo & Brand title */}
           <div className="flex flex-col items-center md:items-start text-center md:text-right">
             <button 
               onClick={onGoHome}
               className="text-2xl sm:text-3xl font-black tracking-tight text-white hover:text-[#ea1b25] transition cursor-pointer flex items-center gap-1.5"
             >
-              <span>rzoil - rzoil.net</span>
+              <span>{settings?.storeName || 'rzoil - rzoil.net'}</span>
             </button>
             <span className="text-xs text-gray-400 mt-1">
               الوكيل والموزع المعتمد لزيوت وإضافات رزويل الألمانية في المملكة الأردنية الهاشمية
             </span>
           </div>
 
-          {/* Social sharing & follow as in original site */}
+          {/* Social sharing & follow */}
           <div className="flex flex-col sm:flex-row items-center gap-6 text-sm">
             <div className="flex items-center gap-2">
               <span className="text-gray-300 font-bold">تابعنا:</span>
               <div className="flex items-center gap-2">
                 <a
-                  href="https://facebook.com"
+                  href={facebookUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 flex items-center justify-center text-white transition"
-                  title="Facebook"
+                  className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 flex items-center justify-center text-white transition shadow-sm"
+                  title="صفحة الفيسبوك"
                 >
                   <Facebook className="w-4 h-4" />
                 </a>
+
+                {instagramUrl && (
+                  <a
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-500 via-pink-600 to-purple-600 hover:opacity-90 flex items-center justify-center text-white transition shadow-sm"
+                    title="حساب إنستغرام"
+                  >
+                    <Instagram className="w-4 h-4" />
+                  </a>
+                )}
+
+                {tiktokUrl && (
+                  <a
+                    href={tiktokUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-8 h-8 rounded-full bg-black hover:bg-gray-900 border border-gray-700 flex items-center justify-center text-white transition text-xs font-black shadow-sm"
+                    title="حساب تيك توك"
+                  >
+                    TK
+                  </a>
+                )}
+
                 <a
-                  href="https://twitter.com"
+                  href={twitterUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-8 h-8 rounded-full bg-sky-500 hover:bg-sky-600 flex items-center justify-center text-white transition"
-                  title="Twitter"
+                  className="w-8 h-8 rounded-full bg-sky-500 hover:bg-sky-600 flex items-center justify-center text-white transition shadow-sm"
+                  title="حساب تويتر / إكس"
                 >
                   <Twitter className="w-4 h-4" />
                 </a>
+
+                {youtubeUrl && (
+                  <a
+                    href={youtubeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-8 h-8 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center text-white transition shadow-sm"
+                    title="قناة يوتيوب"
+                  >
+                    <Youtube className="w-4 h-4" />
+                  </a>
+                )}
               </div>
             </div>
 
@@ -107,21 +158,21 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDistributors, onOpenContac
               <div className="flex items-center gap-2">
                 <button
                   onClick={shareFacebook}
-                  className="w-8 h-8 rounded-full bg-blue-800 hover:bg-blue-900 flex items-center justify-center text-white transition cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-blue-800 hover:bg-blue-900 flex items-center justify-center text-white transition cursor-pointer shadow-sm"
                   title="مشاركة على فيسبوك"
                 >
                   <Facebook className="w-4 h-4" />
                 </button>
                 <button
                   onClick={shareTwitter}
-                  className="w-8 h-8 rounded-full bg-black hover:bg-gray-900 border border-gray-700 flex items-center justify-center text-white transition cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-black hover:bg-gray-900 border border-gray-700 flex items-center justify-center text-white transition cursor-pointer shadow-sm"
                   title="مشاركة على إكس / تويتر"
                 >
                   <Twitter className="w-4 h-4" />
                 </button>
                 <button
                   onClick={shareWhatsApp}
-                  className="w-8 h-8 rounded-full bg-[#25D366] hover:bg-[#1fb355] flex items-center justify-center text-white transition cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-[#25D366] hover:bg-[#1fb355] flex items-center justify-center text-white transition cursor-pointer shadow-sm"
                   title="مشاركة على واتساب"
                 >
                   <MessageSquare className="w-4 h-4" />
@@ -139,13 +190,13 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDistributors, onOpenContac
           <span>•</span>
           <button onClick={onOpenContact} className="hover:text-white transition cursor-pointer">اتصل بنا</button>
           <span>•</span>
-          <span>شروط الاستخدام والخصوصية</span>
+          <button onClick={onOpenAdmin} className="hover:text-white transition cursor-pointer font-bold text-gray-300">لوحة الإدارة والمزامنة</button>
         </div>
 
-        {/* Copyright notice exact from original site */}
+        {/* Copyright notice */}
         <div className="pt-4 border-t border-gray-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-500 font-mono gap-2">
-          <span>Developed by CitySoft © 2011 - 2026</span>
-          <span>RZ Oil Deutschland GmbH - All Rights Reserved</span>
+          <span>Developed by CitySoft © 2011 - {new Date().getFullYear()}</span>
+          <span>RZ Oil Deutschland GmbH - Jordan Official Store - All Rights Reserved</span>
         </div>
       </div>
     </footer>

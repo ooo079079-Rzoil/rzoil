@@ -73,6 +73,12 @@ export interface StoreSettings {
   supportPhone: string;
   whatsappPhone: string;
   workingHours: string;
+  facebookUrl?: string;
+  twitterUrl?: string;
+  instagramUrl?: string;
+  tiktokUrl?: string;
+  youtubeUrl?: string;
+  supportEmail?: string;
 }
 
 export interface AdminCredentials {
