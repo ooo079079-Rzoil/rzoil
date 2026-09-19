@@ -169,7 +169,7 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
       category: 'زيوت المحركات',
       price: 10,
       originalPrice: 12,
-      originBadge: 'كتالوج الأردن 🇯🇴',
+      originBadge: 'ألماني أصلي DE',
       image: RZ_OFFICIAL_FALLBACK_LOGO,
       images: [RZ_OFFICIAL_FALLBACK_LOGO],
       volume: '1L',
@@ -271,11 +271,11 @@ export const RzTemplateLibrary: React.FC<RzTemplateLibraryProps> = ({
           <button
             onClick={handleAddAllJordan}
             type="button"
-            className="px-3.5 py-2 bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap"
-            title="إضافة منتجات كتالوج الأردن بالكامل للمتجر دفعة واحدة (47 منتج)"
+            className="px-4 py-2 bg bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xs font-black rounded-xl transition flex items-center gap-1.5 shadow-md cursor-pointer whitespace-nowrap"
+            title="إضافة كافة منتجات رزويل بالكامل إلى المتجر دفعة واحدة (47 منتج)"
           >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>إضافة كتالوج الأردن للمتجر (47 منتج)</span>
+            <CheckCircle2 className="w-4 h-4 text-white" />
+            <span>⚡ إضافة كافة المنتجات للمتجر (47 منتج)</span>
           </button>
 
           <button

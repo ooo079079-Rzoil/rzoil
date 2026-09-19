@@ -323,9 +323,6 @@ export default function App() {
 
   // Check live status on server mount & sync admin credentials, store settings, and products from MySQL
   useEffect(() => {
-    // Record real visitor
-    recordSiteVisit().catch(console.warn);
-
     checkServerDbStatus(dbConfig.apiEndpoint).then((status) => {
       if (status.isConnected) {
         setIsDbConnected(true);

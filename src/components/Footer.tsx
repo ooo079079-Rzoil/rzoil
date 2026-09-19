@@ -183,23 +183,14 @@ export const Footer: React.FC<FooterProps> = ({
         </div>
 
         {/* Quick Footer Links */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-gray-800 text-xs text-gray-400">
-          <div className="flex flex-wrap items-center gap-4">
-            <button onClick={onGoHome} className="hover:text-white transition cursor-pointer">الصفحة الرئيسية</button>
-            <span>•</span>
-            <button onClick={onOpenDistributors} className="hover:text-white transition cursor-pointer">الموزعين في الأردن</button>
-            <span>•</span>
-            <button onClick={onOpenContact} className="hover:text-white transition cursor-pointer">اتصل بنا</button>
-            <span>•</span>
-            <button onClick={onOpenAdmin} className="hover:text-white transition cursor-pointer font-bold text-gray-300">لوحة الإدارة والمزامنة</button>
-          </div>
-
-          {/* Visitor counter badge */}
-          <div className="flex items-center gap-2 px-3 py-1 bg-gray-900 border border-gray-800 rounded-lg text-[11px]">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-gray-400">إجمالي زوار الموقع:</span>
-            <strong className="text-white font-mono">{typeof window !== 'undefined' ? (parseInt(localStorage.getItem('rzoil_site_visits') || '1428', 10)).toLocaleString('ar-JO') : '1,428'} زائر</strong>
-          </div>
+        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-4 border-t border-gray-800 text-xs text-gray-400">
+          <button onClick={onGoHome} className="hover:text-white transition cursor-pointer">الصفحة الرئيسية</button>
+          <span>•</span>
+          <button onClick={onOpenDistributors} className="hover:text-white transition cursor-pointer">الموزعين في الأردن</button>
+          <span>•</span>
+          <button onClick={onOpenContact} className="hover:text-white transition cursor-pointer">اتصل بنا</button>
+          <span>•</span>
+          <button onClick={onOpenAdmin} className="hover:text-white transition cursor-pointer font-bold text-gray-300">لوحة الإدارة والمزامنة</button>
         </div>
 
         {/* Copyright notice */}

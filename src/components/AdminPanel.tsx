@@ -934,19 +934,31 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  {onAddAllTemplatesToStore && (
+                    <button
+                      type="button"
+                      onClick={() => onAddAllTemplatesToStore(JORDAN_OFFICIAL_CATALOG)}
+                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xs font-black rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm whitespace-nowrap"
+                      title="إضافة جميع منتجات رزويل (47 منتج) بترتيبها الأصلي إلى المتجر دفعة واحدة"
+                    >
+                      <CheckCircle className="w-4 h-4 text-white" />
+                      <span>⚡ إضافة جميع المنتجات إلى المتجر (47 منتج)</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => setActiveTab('templates')}
-                    className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
+                    className="px-3 py-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
                   >
                     <Sparkles className="w-4 h-4 text-amber-300" />
-                    <span>⚡ تصفح قوالب رزويل الجاهزة</span>
+                    <span>تصفح الكتالوج</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setIsAddProductOpen(!isAddProductOpen)}
-                    className="px-3.5 py-2 bg-gray-900 hover:bg-black dark:bg-gray-800 dark:hover:bg-gray-700 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
+                    className="px-3 py-2 bg-gray-900 hover:bg-black dark:bg-gray-800 dark:hover:bg-gray-700 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
                   >
                     <Plus className="w-4 h-4" />
                     <span>{isAddProductOpen ? 'إلغاء الإضافة' : 'إضافة صنف مخصص'}</span>

@@ -84,12 +84,6 @@ export const Header: React.FC<HeaderProps> = ({
             <Tag className="w-3.5 h-3.5" />
             <span>منتجات ألمانية أصلية 100%</span>
           </span>
-
-          <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-full text-[11px] text-emerald-800 dark:text-emerald-300 font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <Users className="w-3 h-3 text-emerald-600" />
-            <span>زوار الموقع: {typeof window !== 'undefined' ? (parseInt(localStorage.getItem('rzoil_site_visits') || '1428', 10)).toLocaleString('ar-JO') : '1,428'} زائر</span>
-          </span>
         </div>
         <div className="flex items-center gap-4">
           <button 

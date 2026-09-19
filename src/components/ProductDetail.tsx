@@ -125,15 +125,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           {product.name}
         </h1>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Live Viewers Real-time Badge */}
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 dark:bg-red-950/50 text-[#ea1b25] border border-red-200 dark:border-red-900/60 text-xs font-bold shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-[#ea1b25] animate-ping" />
-            <Eye className="w-3.5 h-3.5" />
-            <span>يشاهده الآن {viewStats.liveViewers} شخص</span>
-            <span className="text-gray-400 font-normal">|</span>
-            <span className="text-gray-600 dark:text-gray-300 font-normal">{viewStats.totalViews} مشاهدة</span>
-          </span>
-
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 text-xs font-bold">
             <CheckCircle2 className="w-3.5 h-3.5" />
             متوفر في المخزن
